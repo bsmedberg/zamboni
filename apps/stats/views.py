@@ -24,6 +24,8 @@ from addons.decorators import addon_view, addon_view_factory
 from addons.models import Addon
 from bandwagon.models import Collection
 from bandwagon.views import get_collection
+import requests
+import waffle
 from zadmin.models import SiteEvent
 
 import amo
@@ -461,8 +463,8 @@ def daterange(start_date, end_date):
         yield start_date + timedelta(n)
 
 
-@memoize(prefix='global_stats', time=60 * 60)
-def _site_query(period, start, end):
+
+def _monolith_site_query(period, start, end):
     # Cached lookup of the keys and the SQL.
     # Taken from remora, a mapping of the old values.
     keys = {
@@ -480,6 +482,72 @@ def _site_query(period, start, end):
         'review_count_new': 'reviews_created',
         'collection_count_new': 'collections_created',
     }
+
+    # getting data from the monolith server
+    # should add a pool somewhere in mkt
+
+    # we should build a client, so we get all the /v1/time introspection etc..
+    server = getattr(settings, 'MONOLITH_SERVER', 'http://166.78.8.5:6543/v1/time')
+    delta = (end - start).days
+    if delta > getattr(settings, 'MONOLITH_MAX_DATE_RANGE', 365):
+        # jeez don't kill us.
+        return []   # should raise an error
+
+    start_date_str = start.strftime('%Y-%m-%d')
+    end_date_str = end.strftime('%Y-%m-%d')
+
+    # we want the aggregated count (aggregation by app_id)
+    query = {"query": {"match_all": {}},
+             "filter": {"range": {"date": {"gte": start_date_str, "lt": end_date_str}}},
+             "sort": [{"date": {"order" : "asc"}}],
+             "size": delta }
+
+    resp = requests.post(server, data=simplejson.dumps(query))
+    results = simplejson.loads(resp.content)['hits']['hits']
+    data2 = []
+
+    for result in results:
+        # XXX cheap splitting
+        line = {}
+        line['date'] = result['_source']['date'].split('T')[0]
+
+        data = result['_source']
+        # XXX we want to have that field indexed: apps_count_installed
+        # until then we're using users_count
+
+        data['apps_count_installed'] = data['users_count']
+        # XXX how to select the field ?
+        line['data'] = data
+
+        data2.append(line)
+
+    return data2, sorted(keys.values())
+
+
+
+#@memoize(prefix='global_stats', time=60 * 60)
+def _site_query(period, start, end):
+    if waffle.switch_is_active('monolith-stats'):
+        return _monolith_site_query(period, start, end)
+
+    # Cached lookup of the keys and the SQL.
+    # Taken from remora, a mapping of the old values.
+    keys = {
+        'addon_downloads_new': 'addons_downloaded',
+        'addon_total_updatepings': 'addons_in_use',
+        'addon_count_new': 'addons_created',
+        'apps_count_new': 'apps_count_new',
+        'apps_count_installed': 'apps_count_installed',
+        'apps_review_count_new': 'apps_review_count_new',
+        'mmo_user_count_new': 'mmo_user_count_new',
+        'mmo_user_count_total': 'mmo_user_count_total',
+        'webtrends_DailyVisitors': 'mmo_total_visitors',
+        'version_count_new': 'addons_updated',
+        'user_count_new': 'users_created',
+        'review_count_new': 'reviews_created',
+        'collection_count_new': 'collections_created',
+    }
+
     cursor = connection.cursor()
     # Let MySQL make this fast. Make sure we prevent SQL injection with the
     # assert.
