@@ -4,6 +4,7 @@ import itertools
 import time
 from types import GeneratorType
 from datetime import date, timedelta
+import threading
 
 from django import http
 from django.conf import settings
@@ -24,6 +25,7 @@ from addons.decorators import addon_view, addon_view_factory
 from addons.models import Addon
 from bandwagon.models import Collection
 from bandwagon.views import get_collection
+from mclient import Client as MonolithClient
 import requests
 import waffle
 from zadmin.models import SiteEvent
@@ -463,6 +465,17 @@ def daterange(start_date, end_date):
         yield start_date + timedelta(n)
 
 
+def _get_monolith_client():
+    _locals = threading.local()
+    if not hasattr(_locals, 'monolith'):
+        server = getattr(settings, 'MONOLITH_SERVER',
+                         'http://166.78.8.5:6543')
+        # XXX will use later
+        max_range = getattr(settings, 'MONOLITH_MAX_DATE_RANGE', 365)
+        _locals.monolith = MonolithClient(server)
+
+    return _locals.monolith
+
 
 def _monolith_site_query(period, start, end):
     # Cached lookup of the keys and the SQL.
@@ -484,45 +497,19 @@ def _monolith_site_query(period, start, end):
     }
 
     # getting data from the monolith server
-    # should add a pool somewhere in mkt
+    client = _get_monolith_client()
 
-    # we should build a client, so we get all the /v1/time introspection etc..
-    server = getattr(settings, 'MONOLITH_SERVER', 'http://166.78.8.5:6543/v1/time')
-    delta = (end - start).days
-    if delta > getattr(settings, 'MONOLITH_MAX_DATE_RANGE', 365):
-        # jeez don't kill us.
-        return []   # should raise an error
+    # XXX we want to have that field indexed: apps_count_installed
+    # until then we're using users_count
+    field = 'users_count'
 
-    start_date_str = start.strftime('%Y-%m-%d')
-    end_date_str = end.strftime('%Y-%m-%d')
+    def _get_data():
+        for result in client(field, start, end, interval='day'):
+            yield {'date': result['date'].strftime('%Y-%m-%d'),
+                   'data': {'apps_count_installed': result['count']}}
 
-    # we want the aggregated count (aggregation by app_id)
-    query = {"query": {"match_all": {}},
-             "filter": {"range": {"date": {"gte": start_date_str, "lt": end_date_str}}},
-             "sort": [{"date": {"order" : "asc"}}],
-             "size": delta }
-
-    resp = requests.post(server, data=simplejson.dumps(query))
-    results = simplejson.loads(resp.content)['hits']['hits']
-    data2 = []
-
-    for result in results:
-        # XXX cheap splitting
-        line = {}
-        line['date'] = result['_source']['date'].split('T')[0]
-
-        data = result['_source']
-        # XXX we want to have that field indexed: apps_count_installed
-        # until then we're using users_count
-
-        data['apps_count_installed'] = data['users_count']
-        # XXX how to select the field ?
-        line['data'] = data
-
-        data2.append(line)
-
-    return data2, sorted(keys.values())
-
+    # iter ?
+    return list(_get_data()), sorted(keys.values())
 
 
 #@memoize(prefix='global_stats', time=60 * 60)
