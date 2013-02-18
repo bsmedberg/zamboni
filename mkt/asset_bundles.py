@@ -91,7 +91,6 @@ CSS = {
         'css/mkt/typography.less',
         'css/mkt/site.less',
         'css/mkt/banners.less',
-        'css/common/forms.less',
         'css/mkt/forms.less',
         'css/mkt/header.less',
         'css/mkt/navigation.less',
@@ -302,7 +301,6 @@ JS = {
         'js/mkt/paginator.js',
 
         # Account settings.
-        'js/mkt/account.js',
         'js/mkt/feedback.js',
 
         # Homepage.
@@ -328,6 +326,7 @@ JS = {
         'js/mkt/user_state.js',
 
         'js/mkt/webactivities.js',
+        'js/mkt/forms.js',
 
         # Module initialization.
         'js/mkt/consumer_init.js',
@@ -380,7 +379,6 @@ JS = {
         'js/mkt/ecosystem.js',
     ),
     'mkt/debug': (
-        'js/lib/jquery-migrate-1.1.0.js',
         'js/debug/tinytools.js',
     ),
 }
@@ -396,3 +394,18 @@ JS.update({
         'js/mkt/consumer_init.js',
     ),
 })
+
+
+def jquery_migrated():
+    new_JS = dict(JS)
+    for bundle, files in new_JS.iteritems():
+        files = list(files)
+        try:
+            jquery = files.index('js/lib/jquery-1.9.1.js')
+        except ValueError:
+            continue
+        # Insert jquery-migrate immediately after jquery (before any files
+        # requiring jquery are loaded).
+        files.insert(jquery + 1, 'js/lib/jquery-migrate-1.1.0.js')
+        new_JS[bundle] = tuple(files)
+    return new_JS
