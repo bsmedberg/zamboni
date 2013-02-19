@@ -502,9 +502,11 @@ def _monolith_site_query(period, start, end):
     # XXX we want to have that field indexed: apps_count_installed
     # until then we're using users_count
     field = 'users_count'
+    if period == 'date':
+        period = 'day'
 
     def _get_data():
-        for result in client(field, start, end, interval='day'):
+        for result in client(field, start, end, interval=period):
             yield {'date': result['date'].strftime('%Y-%m-%d'),
                    'data': {'apps_count_installed': result['count']}}
 
