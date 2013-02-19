@@ -477,7 +477,7 @@ def _get_monolith_client():
     return _locals.monolith
 
 
-def _monolith_site_query(period, start, end):
+def _monolith_site_query(period, start, end, field):
     # Cached lookup of the keys and the SQL.
     # Taken from remora, a mapping of the old values.
     keys = {
@@ -496,28 +496,31 @@ def _monolith_site_query(period, start, end):
         'collection_count_new': 'collections_created',
     }
 
+    # conversion
+    origin = field
+    fields = {'mmo_total_visitors': 'visitors'}
+    field = fields[field]
+
     # getting data from the monolith server
     client = _get_monolith_client()
 
-    # XXX we want to have that field indexed: apps_count_installed
-    # until then we're using users_count
-    field = 'users_count'
     if period == 'date':
         period = 'day'
 
     def _get_data():
         for result in client(field, start, end, interval=period):
             yield {'date': result['date'].strftime('%Y-%m-%d'),
-                   'data': {'apps_count_installed': result['count']}}
+                   'data': {origin: result['count']}}
 
     # iter ?
     return list(_get_data()), sorted(keys.values())
 
 
 #@memoize(prefix='global_stats', time=60 * 60)
-def _site_query(period, start, end):
+def _site_query(period, start, end, field):
     if waffle.switch_is_active('monolith-stats'):
-        return _monolith_site_query(period, start, end)
+        res = _monolith_site_query(period, start, end, field)
+        return res
 
     # Cached lookup of the keys and the SQL.
     # Taken from remora, a mapping of the old values.
@@ -604,7 +607,7 @@ def site_series(request, format, group, start, end, field):
     start, end = get_daterange_or_404(start, end)
     group = 'date' if group == 'day' else group
     series = []
-    full_series, keys = _site_query(group, start, end)
+    full_series, keys = _site_query(group, start, end, field)
     for row in full_series:
         if field in row['data']:
             series.append({
