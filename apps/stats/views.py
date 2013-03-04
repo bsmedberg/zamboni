@@ -498,7 +498,9 @@ def _monolith_site_query(period, start, end, field):
 
     # conversion
     origin = field
-    fields = {'mmo_total_visitors': 'visitors'}
+    fields = {'mmo_total_visitors': 'visits',
+              'apps_count_installed': 'installs_count'}
+
     field = fields[field]
 
     # getting data from the monolith server
