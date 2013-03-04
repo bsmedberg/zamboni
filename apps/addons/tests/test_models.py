@@ -27,7 +27,7 @@ from addons.models import (Addon, AddonCategory, AddonDependency,
                            AddonDeviceType, AddonRecommendation, AddonType,
                            AddonUpsell, AddonUser, AppSupport, BlacklistedGuid,
                            Category, Charity, CompatOverride,
-                           CompatOverrideRange, FrozenAddon,
+                           CompatOverrideRange, Flag, FrozenAddon,
                            IncompatibleVersions, Persona, Preview)
 from addons.search import setup_mapping
 from applications.models import Application, AppVersion
@@ -840,6 +840,20 @@ class TestAddonModels(amo.tests.TestCase):
 
         eq_(self.newlines_helper(before), after)
 
+    def test_app_flags(self):
+        addon = Addon.objects.get(pk=3615)
+        eq_(addon.has_flag('adult_content'), False)
+        eq_(addon.has_flag('child_content'), False)
+        flag = Flag(addon=addon, adult_content=True,
+                    child_content=False)
+        flag.save()
+        eq_(addon.has_flag('adult_content'), True)
+        eq_(addon.has_flag('child_content'), False)
+
+    def test_unknown_app_flag(self):
+        addon = Addon.objects.get(pk=3615)
+        eq_(addon.has_flag('random-does-not-exist'), False)
+
     def test_app_categories(self):
         addon = lambda: Addon.objects.get(pk=3615)
 
@@ -1409,23 +1423,23 @@ class TestPersonaModel(amo.tests.TestCase):
     def setUp(self):
         self.addon = Addon.objects.get(id=15663)
         self.persona = self.addon.persona
-        self.persona.header = 'header.jpg'
-        self.persona.footer = 'footer.jpg'
+        self.persona.header = 'header.png'
+        self.persona.footer = 'footer.png'
         self.persona.save()
 
     def test_image_urls(self):
         self.persona.persona_id = 0
         self.persona.save()
         p = lambda x: '/15663/' + x
-        assert self.persona.thumb_url.endswith(p('thumb.jpg')), (
+        assert self.persona.thumb_url.endswith(p('preview.png')), (
             self.persona.thumb_url)
-        assert self.persona.icon_url.endswith(p('icon.jpg')), (
+        assert self.persona.icon_url.endswith(p('icon.png')), (
             self.persona.icon_url)
-        assert self.persona.preview_url.endswith(p('preview.jpg')), (
+        assert self.persona.preview_url.endswith(p('preview.png')), (
             self.persona.preview_url)
-        assert self.persona.header_url.endswith(p('header.jpg')), (
+        assert self.persona.header_url.endswith(p('header.png')), (
             self.persona.header_url)
-        assert self.persona.footer_url.endswith(p('footer.jpg')), (
+        assert self.persona.footer_url.endswith(p('footer.png')), (
             self.persona.footer_url)
 
     def test_old_image_urls(self):
@@ -1436,9 +1450,9 @@ class TestPersonaModel(amo.tests.TestCase):
             self.persona.icon_url)
         assert self.persona.preview_url.endswith(p('preview_large.jpg')), (
             self.persona.preview_url)
-        assert self.persona.header_url.endswith(p('header.jpg')), (
+        assert self.persona.header_url.endswith(p('header.png')), (
             self.persona.header_url)
-        assert self.persona.footer_url.endswith(p('footer.jpg')), (
+        assert self.persona.footer_url.endswith(p('footer.png')), (
             self.persona.footer_url)
 
     def test_update_url(self):

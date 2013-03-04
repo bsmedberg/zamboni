@@ -34,8 +34,6 @@
       </noscript>
     {% endblock %}
 
-    {% include 'mobile/head_debug.html' %}
-
     {% if logged %}
       <meta name="csrf" content="{{ csrf_token }}">
     {% endif %}
@@ -107,7 +105,7 @@
     {% include 'mkt/footer.html' %}
 
     {% if not logged %}
-      <div id="login" class="overlay">
+      <div class="overlay centre login">
         <section>
           <h2>{{ _('Please sign in') }}</h2>
           <p>
@@ -117,7 +115,7 @@
             {% endtrans %}
           </p>
           <footer>
-            <a class="button browserid" href="#">{{ _('Log in / Register') }}</a>
+            <a class="button browserid" href="#">{{ _('Sign in / Sign up') }}</a>
           </footer>
         </section>
       </div>

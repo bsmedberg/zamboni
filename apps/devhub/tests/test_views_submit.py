@@ -22,50 +22,40 @@ from versions.models import License
 
 
 class TestSubmitPersona(amo.tests.TestCase):
-    fixtures = ['base/apps', 'base/addon_5579', 'base/platforms', 'base/users']
+    # TODO(future employee): Make this a form test and move it to `test_forms`.
+    fixtures = ['base/apps', 'base/platforms', 'base/users']
 
     def setUp(self):
         super(TestSubmitPersona, self).setUp()
         self.client.login(username='regular@mozilla.com', password='password')
-        self.category = self.create_category()
+        self.populate()
         self.url = reverse('devhub.personas.submit')
         self.patcher = patch.object(waffle, 'flag_is_active')
         self.patcher.start()
         self.addCleanup(self.patcher.stop)
 
-    def create_category(self):
-        Category.objects.create(application_id=amo.THUNDERBIRD.id,
-                                type=amo.ADDON_PERSONA)
-        return Category.objects.create(application_id=amo.FIREFOX.id,
-                                       type=amo.ADDON_PERSONA)
+    def populate(self):
+        self.cat = Category.objects.create(application_id=amo.FIREFOX.id,
+                                           type=amo.ADDON_PERSONA, name='xxxx')
+        License.objects.create(id=amo.LICENSE_CC_BY.id)
 
     def get_dict(self, **kw):
-        License.objects.create(id=amo.LICENSE_CC_BY.id)
-        data = dict(name='new name', category=self.category.id,
+        data = dict(name='new name', category=self.cat.id,
                     accentcolor='#003366', textcolor='#C0FFEE',
                     summary='new summary',
                     tags='tag1, tag2, tag3',
-                    license=amo.LICENSE_CC_BY.id)
+                    license=amo.LICENSE_CC_BY.id,
+                    agreed=True)
         data.update(**kw)
         return data
 
     def test_submit_name_unique(self):
         """Make sure name is unique."""
-        r = self.client.post(self.url, self.get_dict(name='Cooliris'))
-        self.assertFormError(r, 'form', 'name',
-            'This name is already in use. Please choose another.')
-
-    def test_submit_name_unique_strip(self):
-        """Make sure we can't sneak in a name by adding a space or two."""
-        r = self.client.post(self.url, self.get_dict(name='  Cooliris  '))
-        self.assertFormError(r, 'form', 'name',
-            'This name is already in use. Please choose another.')
-
-    def test_submit_name_unique_case(self):
-        """Make sure unique names aren't case sensitive."""
-        r = self.client.post(self.url, self.get_dict(name='cooliris'))
-        self.assertFormError(r, 'form', 'name',
-            'This name is already in use. Please choose another.')
+        Addon.objects.create(type=amo.ADDON_EXTENSION, name='Cooliris')
+        for name in ('Cooliris', '  Cooliris  ', 'cooliris'):
+            r = self.client.post(self.url, self.get_dict(name=name))
+            self.assertFormError(r, 'form', 'name',
+                'This name is already in use. Please choose another.')
 
     def test_submit_name_required(self):
         """Make sure name is required."""
@@ -187,8 +177,8 @@ class TestSubmitPersona(amo.tests.TestCase):
         # Test for correct Addon and Persona values.
         eq_(unicode(addon.name), data['name'])
 
-        eq_(sorted(addon.categories.values_list('id', flat=True)),
-            sorted(Category.objects.values_list('id', flat=True)))
+        self.assertSetEqual(addon.categories.values_list('id', flat=True),
+                            [self.cat.id])
 
         tags = ', '.join(sorted(addon.tags.values_list('tag_text', flat=True)))
         eq_(tags, data['tags'])
@@ -210,19 +200,19 @@ class TestSubmitPersona(amo.tests.TestCase):
         # Test for header, footer, and preview images.
         dst = os.path.join(settings.PERSONAS_PATH, str(addon.id))
 
-        img = os.path.join(dst, 'header.jpg')
-        eq_(persona.header, 'header')
+        img = os.path.join(dst, 'header.png')
+        eq_(persona.header, 'header.png')
         eq_(storage.exists(img), True)
         eq_(Image.open(storage.open(img)).size, (3000, 200))
         eq_(amo.PERSONA_IMAGE_SIZES['header'][1], (3000, 200))
 
-        img = os.path.join(dst, 'footer.jpg')
-        eq_(persona.footer, 'footer')
+        img = os.path.join(dst, 'footer.png')
+        eq_(persona.footer, 'footer.png')
         eq_(storage.exists(img), True)
         eq_(Image.open(storage.open(img)).size, (3000, 100))
         eq_(amo.PERSONA_IMAGE_SIZES['footer'][1], (3000, 100))
 
-        img = os.path.join(dst, 'preview.jpg')
+        img = os.path.join(dst, 'preview.png')
         eq_(storage.exists(img), True)
         eq_(Image.open(storage.open(img)).size, (680, 100))
         eq_(amo.PERSONA_IMAGE_SIZES['header'][0], (680, 100))

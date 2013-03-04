@@ -40,6 +40,19 @@ $(function() {
     if (!$('#submit-persona, #addon-edit-license').length) {
         return;
     }
+
+    function checkValid(form) {
+        if (form) {
+            $(form).find('button[type=submit]').attr('disabled', !form.checkValidity());
+        }
+    }
+    $(document).delegate('input, select, textarea', 'change keyup paste', function(e) {
+        checkValid(e.target.form);
+    });
+    $('form').each(function() {
+        checkValid(this);
+    });
+
     initLicense();
     if (!$('#addon-edit-license').length) {
         initCharCount();
@@ -100,7 +113,6 @@ function initLicense() {
 
 
 function initPreview() {
-
     function hex2rgb(hex) {
         var hex = parseInt(((hex.indexOf('#') > -1) ? hex.substring(1) : hex), 16);
         return {
@@ -184,12 +196,13 @@ function initPreview() {
         var accentcolor = $d.find('#id_accentcolor').attr('data-rgb'),
             textcolor = $d.find('#id_textcolor').val();
         $preview.find('.title, .author').css({
-            'background-color': format('rgba({0}, 0.7)', accentcolor),
+            'background-color': format('rgba({0}, .7)', accentcolor),
             'color': textcolor
         });
     }
 
-    $('input[type=color]').change(function() {
+    var $color = $('#submit-persona input[type=color]');
+    $color.change(function() {
         var $this = $(this),
             val = $this.val();
         if (val.indexOf('#') === 0) {
@@ -198,13 +211,21 @@ function initPreview() {
         }
         updatePersona();
     }).trigger('change');
-    $('#submit-persona input[type="color"]').miniColors({change: function() {
-        $('input[type=color]').trigger('change');
-        updatePersona();
-    }});
+
+    // Check for native `input[type=color]` support (i.e., WebKit).
+    if ($color[0].type === 'color') {
+        $('.miniColors-trigger').hide();
+    } else {
+        $color.miniColors({
+            change: function() {
+                $color.trigger('change');
+                updatePersona();
+            }
+        });
+    }
 
     $('#id_name').bind('change keyup paste blur', _.throttle(function() {
-        $('#persona-preview-name').text($(this).val() || gettext("Your Persona's Name"));
+        $('#persona-preview-name').text($(this).val() || gettext("Your Theme's Name"));
     }, 250)).trigger('change');
     $('#submit-persona').submit(function() {
         postUnsaved(POST);
@@ -214,4 +235,14 @@ function initPreview() {
     _.each(POST, function(v, k) {
         $('input[value="' + k + '"]').siblings('input[type=file]').trigger('upload_success', [{dataURL: v}, k]);
     });
+}
+
+
+function postUnsaved(data) {
+    $('input[name="unsaved_data"]').val(JSON.stringify(data));
+}
+
+
+function loadUnsaved() {
+    return JSON.parse($('input[name="unsaved_data"]').val() || '{}');
 }

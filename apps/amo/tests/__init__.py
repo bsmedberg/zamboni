@@ -367,7 +367,7 @@ class TestCase(RedisTest, test_utils.TestCase):
                 'Redirected to: %s, expected: %s'
                 % (path, reverse('users.login')))
 
-    def assertSetEqual(self, a, b):
+    def assertSetEqual(self, a, b, message=None):
         """
         This is a thing in unittest in 2.7,
         but until then this is the thing.
@@ -375,8 +375,8 @@ class TestCase(RedisTest, test_utils.TestCase):
         Oh, and Dyango's `assertSetEqual` is lame and requires actual sets:
         http://bit.ly/RO9sTr
         """
-        eq_(set(a), set(b))
-        eq_(len(a), len(b))
+        eq_(set(a), set(b), message)
+        eq_(len(a), len(b), message)
 
     def assertCloseToNow(self, dt, now=None):
         """
@@ -439,9 +439,9 @@ class TestCase(RedisTest, test_utils.TestCase):
         if not setting:
             raise SkipTest('Skipping since setting is disabled')
 
-    def grant_permission(self, user_obj, rules):
+    def grant_permission(self, user_obj, rules, name='Test Group'):
         """Creates group with rule, and adds user to group."""
-        group = Group.objects.create(name='Test Group', rules=rules)
+        group = Group.objects.create(name=name, rules=rules)
         GroupUser.objects.create(group=group, user=user_obj)
 
     def days_ago(self, days):

@@ -26,15 +26,17 @@
     }
 }
 
+// This is stupid. Fix this.
+
 #search,
 #search-q,
 body[data-page-type='search'] #search,
-body[data-page-type='search'] #search-q {
+body[data-page-type='search'] .suggestions #search {
     width: 175px;
 }
 
-body[data-page-type='search'] #search {
-    margin-right: 12px;
+body[data-page-type='root'] #search {
+    width: 275px;
 }
 
 #page {
@@ -50,7 +52,7 @@ body[data-page-type='search'] #search {
     display: none !important;
 }
 
-.force-mobile #site-header section.main,
+#site-header section.main,
 #site-header nav,
 #search {
     height: 100%;
@@ -59,15 +61,15 @@ body[data-page-type='search'] #search {
 #search {
     display: block;
     position: absolute;
-    right: 50px;
+    right: 57px;
 }
 
 .logged #search {
-    right: 35px;
+    right: 47px;
 }
 
 #site-header, .classic-header {
-    .box-shadow(~'0 -1px 0 rgba(0,0,0,.5) inset, 0 1px 0 rgba(255,255,255,.1) inset');
+    box-shadow: 0 -1px 0 rgba(0,0,0,.5) inset, 0 1px 0 rgba(255,255,255,.1) inset;
     background: darken(#3f4f5b, 5%) @grain-src;
     background-size: 100px 100px;
     position: absolute;
@@ -137,13 +139,13 @@ body, .home {
 #site-search-suggestions .wrap,
 #site-search-suggestions ul,
 #site-search-suggestions li:only-child a {
-    .border-radius(3px);
+    border-radius: 3px;
 }
 
 #site-search-suggestions {
-    .box-shadow(0 0 1px);
+    box-shadow: 0 0 1px;
     height: auto;
-    margin: -24px 62px 0 0;
+    margin: -24px 57px 0 0;
     position: static;
     float: right;
     width: 230px;
@@ -162,10 +164,10 @@ body, .home {
         }
     }
     li:first-child a {
-        .border-radius(3px 3px 0 0);
+        border-radius: 3px 3px 0 0;
     }
     li:last-child a {
-        .border-radius(0 0 3px 3px);
+        border-radius: 0 0 3px 3px;
         border-bottom: 0;
     }
     li:only-child a {
@@ -179,8 +181,20 @@ body, .home {
     }
 }
 
-.logged #site-search-suggestions {
+// Undoing search stuff from navigation.less - forgive my sins.
+
+body.logged #site-search-suggestions {
     margin-right: 47px;
+}
+
+body[data-page-type="root"] {
+    #search {
+        padding-right: 0;
+        overflow: visible;
+    }
+    .fancy {
+        position: static;
+    }
 }
 
 @media @retina {

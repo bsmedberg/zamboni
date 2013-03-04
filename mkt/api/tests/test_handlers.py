@@ -27,6 +27,7 @@ class ValidationHandler(BaseOAuth):
         self.list_url = ('api_dispatch_list', {'resource_name': 'validation'})
         self.get_url = None
         self.user = UserProfile.objects.get(pk=2519)
+        self.anon = OAuthClient(None, api_name='apps')
 
     def create(self):
         res = self.client.post(self.list_url,
@@ -73,6 +74,12 @@ class TestAddValidationHandler(ValidationHandler):
                                data=json.dumps({'manifest': 'blurgh'}))
         eq_(res.status_code, 400)
         eq_(self.get_error(res)['manifest'], ['Enter a valid URL.'])
+
+    def test_anon(self):
+        res = self.anon.post(self.list_url,
+                             data=json.dumps({'manifest':
+                                              'http://foo.com'}))
+        eq_(res.status_code, 201)
 
 
 @patch.object(settings, 'SITE_URL', 'http://api/')
@@ -157,11 +164,10 @@ class TestGetValidationHandler(ValidationHandler):
         res = self.client.get(self.get_url)
         eq_(res.status_code, 200)
 
-    def test_not_owner(self):
-        obj = self.create()
-        obj.update(user=UserProfile.objects.get(email='admin@mozilla.com'))
-        res = self.client.get(self.get_url)
-        eq_(res.status_code, 403)
+    def test_anon(self):
+        self.create()
+        res = self.anon.get(self.get_url)
+        eq_(res.status_code, 200)
 
     def test_not_found(self):
         url = ('api_dispatch_detail',
@@ -203,6 +209,7 @@ class CreateHandler(BaseOAuth):
         super(CreateHandler, self).setUp()
         self.list_url = ('api_dispatch_list', {'resource_name': 'app'})
         self.user = UserProfile.objects.get(pk=2519)
+        self.anon = OAuthClient(None, api_name='apps')
         self.file = tempfile.NamedTemporaryFile('w', suffix='.webapp').name
         self.manifest_copy_over(self.file, 'mozball-nice-slug.webapp')
         self.categories = []
@@ -260,6 +267,14 @@ class TestAppCreateHandler(CreateHandler, AMOPaths):
         eq_(self.get_error(res)['__all__'], ['No upload found.'])
         eq_(self.count(), 0)
 
+    def test_anon(self):
+        obj = self.create()
+        obj.update(user=None)
+        res = self.client.post(self.list_url,
+                               data=json.dumps({'manifest': obj.uuid}))
+        eq_(res.status_code, 403)
+        eq_(self.count(), 0)
+
     def test_not_yours(self):
         obj = self.create()
         obj.update(user=UserProfile.objects.get(email='admin@mozilla.com'))
@@ -304,6 +319,17 @@ class TestAppCreateHandler(CreateHandler, AMOPaths):
         content = json.loads(res.content)
         eq_(content['status'], 0)
 
+    def test_not_public(self):
+        self.create_app()
+        res = self.anon.get(self.get_url)
+        eq_(res.status_code, 403)
+
+    def test_get_public(self):
+        app = self.create_app()
+        app.update(status=amo.STATUS_PUBLIC)
+        res = self.anon.get(self.get_url)
+        eq_(res.status_code, 200)
+
     def test_get_previews(self):
         app = self.create_app()
         res = self.client.get(self.get_url)
@@ -332,6 +358,12 @@ class TestAppCreateHandler(CreateHandler, AMOPaths):
         eq_(res.status_code, 202)
         app = Webapp.objects.get(pk=app.pk)
         eq_(app.privacy_policy, 'wat')
+
+    def test_put_anon(self):
+        app = self.create_app()
+        app.update(status=amo.STATUS_PUBLIC)
+        res = self.anon.put(self.get_url, data=json.dumps(self.base_data()))
+        eq_(res.status_code, 403)
 
     def test_put_categories_worked(self):
         app = self.create_app()

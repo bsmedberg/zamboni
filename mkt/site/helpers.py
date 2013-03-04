@@ -10,13 +10,11 @@ from jingo_minify import helpers as jingo_minify_helpers
 from tower import ugettext as _
 
 import amo
-from access import acl
 from amo.helpers import urlparams
 from amo.urlresolvers import reverse, get_outgoing_url
 from amo.utils import JSONEncoder
 from translations.helpers import truncate
 from versions.compare import version_int as vint
-from mkt.webapps.models import Installed
 
 import mkt
 
@@ -327,10 +325,11 @@ def mkt_breadcrumbs(context, product=None, items=None, crumb_size=40,
 @register.function
 def form_field(field, label=None, tag='div', req=None, opt=False, hint=False,
                tooltip=False, some_html=False, cc_startswith=None, cc_for=None,
-               cc_maxlength=None, grid=False, cls=None):
+               cc_maxlength=None, grid=False, cls=None, validate=False):
     attrs = {}
     # Add a `required` attribute so we can do form validation.
-    if field.field.required:
+    # TODO(cvan): Write tests for kumar some day.
+    if validate and field.field.required:
         attrs['required'] = ''
     c = dict(field=field, label=label or field.label, tag=tag, req=req,
              opt=opt, hint=hint, tooltip=tooltip, some_html=some_html,
@@ -342,9 +341,11 @@ def form_field(field, label=None, tag='div', req=None, opt=False, hint=False,
 
 @register.function
 def grid_field(field, label=None, tag='div', req=None, opt=False, hint=False,
-               some_html=False, cc_startswith=None, cc_maxlength=None):
+               some_html=False, cc_startswith=None, cc_maxlength=None,
+               validate=False):
     return form_field(field, label, tag, req, opt, hint, some_html,
-                      cc_startswith, cc_maxlength, grid=True)
+                      cc_startswith, cc_maxlength, grid=True,
+                      validate=validate)
 
 
 @register.filter
@@ -374,7 +375,6 @@ def admin_site_links():
         'tools': [
             ('View request environment', reverse('amo.env')),
             ('Manage elasticsearch', reverse('zadmin.elastic')),
-            ('Manage EcoSystem', reverse('mkt.zadmin.ecosystem')),
             ('Purge data from memcache', reverse('zadmin.memcache')),
             ('Purge pages from zeus', reverse('zadmin.hera')),
             ('Create a new OAuth Consumer',

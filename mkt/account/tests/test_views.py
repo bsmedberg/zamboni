@@ -17,6 +17,7 @@ import amo
 import amo.tests
 from amo.urlresolvers import reverse
 from addons.models import AddonPremium, AddonUser
+from devhub.models import ActivityLog
 from market.models import PreApprovalUser, Price, PriceCurrency
 import paypal
 from reviews.models import Review
@@ -25,7 +26,6 @@ from users.models import UserNotification, UserProfile
 from versions.models import Version
 import users.notifications as email
 
-from mkt.developers.models import ActivityLog
 from mkt.site.fixtures import fixture
 from mkt.webapps.models import Installed, Webapp
 
@@ -901,15 +901,3 @@ class TestFeedback(amo.tests.TestCase):
         eq_(res.status_code, 200)
         doc = pq(res.content)
         eq_(doc('.toggles').length, 1)
-
-    def test_page_anonymous(self):
-        """Check that anonymous users get the correct feedback page."""
-        res = self.client.get(self.url)
-        eq_(res.status_code, 200)
-        eq_(pq(res.content)('footer .feedback').attr('href'), self.url)
-
-        res = self.client.get(self.url, {'mobile': 'true'})
-        eq_(res.status_code, 200)
-        doc = pq(res.content)
-        eq_(doc('.toggles').length, 0)
-        eq_(doc('.header-button.settings').attr('href'), self.url)

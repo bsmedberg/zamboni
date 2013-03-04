@@ -200,6 +200,17 @@ ADDON_ADMIN_SEARCH_TYPES = ADDON_SEARCH_TYPES + [ADDON_PLUGIN]
 
 MARKETPLACE_TYPES = [ADDON_PERSONA, ADDON_WEBAPP]
 
+# ADDON_WEBAPP Types
+ADDON_WEBAPP_HOSTED = 1
+ADDON_WEBAPP_PACKAGED = 2
+
+ADDON_WEBAPP_TYPES = {
+    ADDON_WEBAPP_HOSTED: 'hosted',
+    ADDON_WEBAPP_PACKAGED: 'packaged',
+    # TODO: Future home of type 'privileged'.
+}
+ADDON_WEBAPP_TYPES_LOOKUP = dict((v, k) for k, v in ADDON_WEBAPP_TYPES.items())
+
 # Icons
 ADDON_ICONS = {
     ADDON_ANY: 'default-addon.png',
@@ -260,7 +271,12 @@ ADDON_PREMIUM_TYPES = {
 # Non-locale versions for the API.
 ADDON_PREMIUM_API = {
     ADDON_FREE: 'free',
+    ADDON_PREMIUM: 'premium',
+    ADDON_PREMIUM_INAPP: 'premium-inapp',
+    ADDON_FREE_INAPP: 'free-inapp',
+    ADDON_OTHER_INAPP: 'other',
 }
+ADDON_PREMIUM_API_LOOKUP = dict((v, k) for k, v in ADDON_PREMIUM_API.items())
 
 # Apps that require some sort of payment prior to installing.
 ADDON_PREMIUMS = (ADDON_PREMIUM, ADDON_PREMIUM_INAPP)

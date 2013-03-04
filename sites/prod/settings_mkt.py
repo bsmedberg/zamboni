@@ -5,6 +5,7 @@ from settings_base import *
 from .. import splitstrip
 import private_mkt
 
+DOMAIN = 'marketplace.firefox.com'
 SERVER_EMAIL = 'zmarketplaceprod@addons.mozilla.org'
 SECRET_KEY = private_mkt.SECRET_KEY
 
@@ -123,10 +124,6 @@ SENTRY_CLIENT = 'djangoraven.metlog.MetlogDjangoClient'
 # Pass through the DSN to the Raven client and force signal
 # registration so that exceptions are passed through to sentry
 RAVEN_CONFIG = {'dsn': SENTRY_DSN, 'register_signals': True}
-
-# Remove SEN.
-if 'sony' in CARRIER_URLS:
-    CARRIER_URLS.remove('sony')
 
 METLOG_CONF = {
     'plugins': {'cef': ('metlog_cef.cef_plugin:config_plugin', {}),

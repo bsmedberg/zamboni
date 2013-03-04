@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
 
+import django.dispatch
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage as storage
 from django.db import models
-import django.dispatch
-import jinja2
 
-import commonware.log
 import caching.base
+import commonware.log
+import jinja2
 import waffle
 
+import addons.query
 import amo
 import amo.models
 import amo.utils
@@ -29,6 +30,20 @@ from .compare import version_dict, version_int
 log = commonware.log.getLogger('z.versions')
 
 
+class VersionManager(amo.models.ManagerBase):
+
+    def __init__(self, include_deleted=False):
+        amo.models.ManagerBase.__init__(self)
+        self.include_deleted = include_deleted
+
+    def get_query_set(self):
+        qs = super(VersionManager, self).get_query_set()
+        qs = qs._clone(klass=addons.query.IndexQuerySet)
+        if not self.include_deleted:
+            qs = qs.exclude(deleted=True)
+        return qs.transform(Version.transformer)
+
+
 class Version(amo.models.ModelBase):
     addon = models.ForeignKey('addons.Addon', related_name='versions')
     license = models.ForeignKey('License', null=True)
@@ -42,6 +57,11 @@ class Version(amo.models.ModelBase):
 
     has_info_request = models.BooleanField(default=False)
     has_editor_comment = models.BooleanField(default=False)
+
+    deleted = models.BooleanField(default=False)
+
+    objects = VersionManager()
+    with_deleted = VersionManager(include_deleted=True)
 
     class Meta(amo.models.ModelBase.Meta):
         db_table = 'versions'
@@ -166,7 +186,18 @@ class Version(amo.models.ModelBase):
     def delete(self):
         log.info(u'Version deleted: %r (%s)' % (self, self.id))
         amo.log(amo.LOG.DELETE_VERSION, self.addon, str(self.version))
-        super(Version, self).delete()
+        if settings.MARKETPLACE:
+            self.update(deleted=True)
+            if self.addon.is_packaged:
+                f = self.all_files[0]
+                # Unlink signed packages if packaged app.
+                storage.delete(f.signed_file_path)
+                log.info(u'Unlinked file: %s' % f.signed_file_path)
+                storage.delete(f.signed_reviewer_file_path)
+                log.info(u'Unlinked file: %s' % f.signed_reviewer_file_path)
+
+        else:
+            super(Version, self).delete()
 
     @property
     def current_queue(self):
@@ -286,9 +317,10 @@ class Version(amo.models.ModelBase):
 
     @property
     def status(self):
-        status = dict([(f.status, amo.STATUS_CHOICES[f.status])
-                       for f in self.all_files])
-        return status.values()
+        if settings.MARKETPLACE and self.deleted:
+            return [amo.STATUS_CHOICES[amo.STATUS_DELETED]]
+        else:
+            return [amo.STATUS_CHOICES[f.status] for f in self.all_files]
 
     @property
     def statuses(self):
@@ -298,6 +330,7 @@ class Version(amo.models.ModelBase):
     def is_allowed_upload(self):
         """Check that a file can be uploaded based on the files
         per platform for that type of addon."""
+
         num_files = len(self.all_files)
         if self.addon.type == amo.ADDON_SEARCH:
             return num_files == 0
@@ -397,6 +430,7 @@ class Version(amo.models.ModelBase):
         if not self.files.filter(status=amo.STATUS_BETA).exists():
             qs = File.objects.filter(version__addon=self.addon_id,
                                      version__lt=self.id,
+                                     version__deleted=False,
                                      status__in=[amo.STATUS_UNREVIEWED,
                                                  amo.STATUS_PENDING])
             # Use File.update so signals are triggered.

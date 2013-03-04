@@ -7,7 +7,6 @@ import commonware.log
 import jingo
 from session_csrf import anonymous_csrf_exempt
 from tower import ugettext as _
-import waffle
 
 from access import acl
 from addons.decorators import addon_view_factory
@@ -121,7 +120,8 @@ def _record(request, addon):
     amo.log(amo.LOG.INSTALL_ADDON, addon)
     send_request('install', request, {
         'app-domain': addon.domain_from_url(addon.origin),
-        'app-id': addon.pk
+        'app-id': addon.pk,
+        'anonymous': request.user.is_anonymous(),
     })
 
     return ctx

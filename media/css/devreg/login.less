@@ -82,7 +82,7 @@
                 margin: 0;
             }
             p + p {
-                .border-radius(0 0 8px 8px);
+                border-radius: 0 0 8px 8px;
                 background: @faded-taupe;
                 border-top: 1px dotted @taupe;
                 margin: .5em -15px -15px;
@@ -131,4 +131,19 @@
     footer {
         margin-top: 5px;
     }
+}
+
+.centre {
+    text-align: center;
+    h2, footer {
+        text-align: center;
+    }
+    .proceed {
+        margin-top: 20px;
+    }
+}
+
+.notice {
+    color: @medium-gray;
+    margin: 30px 0 20px;
 }

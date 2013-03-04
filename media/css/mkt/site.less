@@ -5,7 +5,8 @@
 // This is not your diaper.
 
 * {
-    .border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
     text-rendering: optimizeLegibility;
     word-wrap: break-word;
 }
@@ -57,7 +58,7 @@ body .loading-fragment {
         z-index: 1;
         width: 86px;
         &:before {
-            .border-radius(180px);
+            border-radius: 180px;
             background: rgba(0,0,0,.3);
             content: "";
             display: block;
@@ -73,7 +74,7 @@ body .loading-fragment {
 }
 
 .notification-box {
-    .box-shadow(0 -1px 0 #ddd inset, 0 1px 0 rgba(0,0,0,.1));
+    box-shadow: 0 -1px 0 #ddd inset, 0 1px 0 rgba(0,0,0,.1);
     padding: 15px;
     background: rgba(255,255,255,0.6);
     form {
@@ -162,32 +163,12 @@ body .loading-fragment {
     clear: both;
 }
 
-.col {
-    float: left;
-    margin-left: @gutter * @px;
-    &:first-child {
-        margin-left: 0;
-    }
+#site-header section.main,
+#page section.main {
+    margin: 0 auto;
 }
-
-.html-rtl .col {
-    float: right;
-    margin-right: @gutter * @px;
-    margin-left: auto;
-    &:first-child {
-        margin-right: 0;
-    }
-}
-
-.force-mobile {
-    #site-header section.main,
-    #page section.main,
-    #site-footer {
-        margin: 0 auto;
-    }
-    #page > .overlay {
-        max-width: 100%;
-    }
+#page > .overlay {
+    max-width: 100%;
 }
 
 // 'Notice' pages have a padded body and a home icon in the header.
@@ -209,65 +190,29 @@ body[data-page-type=notice], body[data-page-type=alpha] {
     height: 1px;
 }
 
-#site-footer {
-    display: none;
-    padding: 15px 0 30px;
-
-    margin-top: 15px;
-    border-top: 1px solid rgba(3, 16, 26, 0.13);
-    .box-shadow(inset 0 1px fade(#fff, 50%));
-
-    .account {
-        color: @dark-gray;
-        font-weight: 400;
-        margin-bottom: 5px;
-        a {
-            font-weight: 600;
-        }
-        .logout {
-            font-weight: 200;
-        }
-    }
-    // Reviewers should always see a footer.
-    &.reviewer {
+.several-buttons {
+    box-shadow: 0 1px 0 rgba(3,16,26,.13) inset, 0 2px 0 rgba(255,255,255,.5) inset;
+    float: left;
+    margin-top: 10px;
+    padding-top: 10px;
+    width: 100%;
+    .button {
+        margin-top: 10px;
         display: block;
     }
 }
 
-// Mobile footer needs only the "log in" button.
-@media (max-width: @not-desktop) {
-    #site-footer.anonymous {
-        display: block;
-        text-align: center;
-        nav {
-            display: none;
-        }
+.two-up {
+    width: 50%;
+    padding: 0 5px;
+    float: left;
+    &:nth-child(2n+1) {
+        padding-right: 0;
+    }
+    &:nth-child(2n) {
+        padding-left: 0;
     }
 }
-
-.force-mobile {
-    .account, .footer-links a {
-        padding: 4px;
-    }
-    .footer-links {
-        p {
-            margin: 0;
-        }
-        a {
-            display: block;
-            &:hover {
-                background-color: rgba(255,255,255,.35);
-                color: @link-dark;
-                text-decoration: underline;
-            }
-        }
-        p + p,
-        a + a {
-            border-top: 1px solid @light-gray;
-        }
-    }
-}
-
 
 @-webkit-keyframes spin {
     from { -webkit-transform: rotate(0turn); }

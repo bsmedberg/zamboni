@@ -72,16 +72,14 @@ $(document).ready(function() {
     var tabletCookie = $.cookie('tablet');
     if (!tabletCookie && z.capabilities.tablet) {
         $.cookie('tablet', 'true', {path: '/'});
-        if (z.body.hasClass('sony') && !z.body.hasClass('desktop')) {
-            // Reload to get the tablet design.
-            window.location.reload();
-            // TODO: Figure out a smarter way to do this for the real Marketplace.
-        }
     }
 
     stick.basic();
 });
 
+if (window.screen.lockOrientation) {
+    window.screen.lockOrientation("portrait");
+}
 
 z.page.on('fragmentloaded', function() {
     z.apps = {};
@@ -152,17 +150,17 @@ z.page.on('fragmentloaded', function() {
 
         if ($this.hasClass('dismiss')) {
             // Dismiss looks like back but actually just dismisses an overlay.
-            $('#filters').removeClass('show');
+            $('#filters').trigger('overlay_dismissed');
         } else if ($this.hasClass('filter')) {
             // `getVars()` defaults to use location.search.
             initSelectedFilter();
             $('#filters').addClass('show');
+            z.body.addClass('overlayed');
         } else if ($this.hasClass('search')) {
             z.body.addClass('show-search');
             $btns.blur();
             $('#search-q').focus();
         } else if ($this.hasClass('cancel')) {
-            z.body.removeClass('show-search');
             $('#search-q').blur();
             $btns.blur();
         } else if ($this.hasClass('search-clear')) {

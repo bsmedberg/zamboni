@@ -27,7 +27,11 @@ function fragmentFilter(el) {
                                    'html': '<em></em>'})
                         .prependTo($('body'));
 
-        // Hijack <form> submission
+        z.doc.on('reloadonnext', function() {
+            reloadOnNext = true;
+        });
+
+        // Hijack <form> submission.
         z.body.on('submit', 'form', function(e) {
             if (reloadOnNext) return;
             var form = $(this);
@@ -42,7 +46,7 @@ function fragmentFilter(el) {
             // Not GET or POST? Not interested.
         });
 
-        z.page.ajaxSuccess(function(e, xhr, response) {
+        z.doc.ajaxSuccess(function(e, xhr, response) {
             // Do we have an instruction to clear a part of the fragment cache?
             var bust_flag = xhr.getResponseHeader('x-frag-bust');
             if (bust_flag) {
@@ -307,12 +311,13 @@ function fragmentFilter(el) {
             container.trigger('fragmentloaded', [href, popped, newState]);
         }
 
-        z.doc.on('popstate', function(e) {
+        z.win.on('popstate', function(e) {
             var state = e.originalEvent.state;
             if (state) {
                 navigate(state, true);
             }
-        }).on('loadfragment', function(e, href) {
+        });
+        z.doc.on('loadfragment', function(e, href) {
             if (href) navigate({path: href});
         }).on('refreshfragment', function(e) {
             var path = window.location.pathname + window.location.search + window.location.hash;

@@ -25,6 +25,7 @@ from amo.tests.test_helpers import get_image_path
 from amo.urlresolvers import reverse
 from amo.utils import urlparams
 from browse.tests import test_default_sort, test_listing_sort
+from devhub.models import ActivityLog
 from files.models import FileUpload
 from files.tests.test_models import UploadTest as BaseUploadTest
 from market.models import AddonPremium, Price
@@ -36,7 +37,6 @@ from versions.models import Version
 import mkt
 from mkt.constants import MAX_PACKAGED_APP_SIZE
 from mkt.developers import tasks
-from mkt.developers.models import ActivityLog
 from mkt.developers.views import _filter_transactions, _get_transactions
 from mkt.site.fixtures import fixture
 from mkt.submit.models import AppSubmissionChecklist
@@ -189,12 +189,12 @@ class TestAppDashboard(AppHubTest):
         doc = pq(self.client.get(self.url).content)
         expected = [
             ('Edit Listing', app.get_dev_url()),
-            ('Manage Team Members', app.get_dev_url('owner')),
+            ('Team Members', app.get_dev_url('owner')),
             ('Compatibility & Payments', app.get_dev_url('payments')),
             ('Manage Status', app.get_dev_url('versions')),
             ('View Listing', app.get_url_path()),
-            ('View Statistics', app.get_stats_url()),
-            ('View Transactions', urlparams(
+            ('Statistics', app.get_stats_url()),
+            ('Transactions', urlparams(
                 reverse('mkt.developers.transactions'), app=app.id)),
         ]
         amo.tests.check_links(expected, doc('a.action-link'))
@@ -202,20 +202,23 @@ class TestAppDashboard(AppHubTest):
     def test_action_links_packaged(self):
         self.create_switch('app-stats')
         self.create_switch('view-transactions')
+        self.create_switch('in-app-payments')
         app = self.get_app()
-        app.update(public_stats=True, is_packaged=True)
+        app.update(public_stats=True, is_packaged=True,
+                   premium_type=amo.ADDON_PREMIUM_INAPP)
         self.make_mine()
         doc = pq(self.client.get(self.url).content)
         expected = [
             ('Edit Listing', app.get_dev_url()),
             ('Add New Version', app.get_dev_url('versions')),
-            ('Manage Team Members', app.get_dev_url('owner')),
+            ('Team Members', app.get_dev_url('owner')),
             ('Compatibility & Payments', app.get_dev_url('payments')),
-            ('Manage Status & Versions', app.get_dev_url('versions')),
             ('View Listing', app.get_url_path()),
-            ('View Statistics', app.get_stats_url()),
-            ('View Transactions', urlparams(
+            ('Statistics', app.get_stats_url()),
+            ('Transactions', urlparams(
                 reverse('mkt.developers.transactions'), app=app.id)),
+            ('Manage Status & Versions', app.get_dev_url('versions')),
+            ('Manage In-App Payments', app.get_dev_url('in_app_config')),
         ]
         amo.tests.check_links(expected, doc('a.action-link'))
 
@@ -224,46 +227,20 @@ class TestAppDashboard(AppHubTest):
         self.create_switch('disabled-payments')
         self.create_switch('view-transactions')
         app = self.get_app()
-        app.update(public_stats=True)
+        app.update(public_stats=True, premium_type=amo.ADDON_PREMIUM_INAPP)
         self.make_mine()
         doc = pq(self.client.get(self.url).content)
         expected = [
             ('Edit Listing', app.get_dev_url()),
-            ('Manage Team Members', app.get_dev_url('owner')),
+            ('Team Members', app.get_dev_url('owner')),
+            ('Compatibility & Payments', app.get_dev_url('payments')),
             ('Manage Status', app.get_dev_url('versions')),
             ('View Listing', app.get_url_path()),
-            ('View Statistics', app.get_stats_url()),
-            ('View Transactions', urlparams(
+            ('Statistics', app.get_stats_url()),
+            ('Transactions', urlparams(
                 reverse('mkt.developers.transactions'), app=app.id)),
         ]
         amo.tests.check_links(expected, doc('a.action-link'), verify=False)
-
-    def test_action_links_with_payments(self):
-        self.create_switch('in-app-payments')
-        app = self.get_app()
-        for status in [amo.ADDON_PREMIUM_INAPP, amo.ADDON_FREE_INAPP]:
-            app.update(premium_type=status)
-            self.make_mine()
-            doc = pq(self.client.get(self.url).content)
-            expected = [
-                ('Manage Status', app.get_dev_url('versions')),
-                ('Manage In-App Payments', app.get_dev_url('in_app_config')),
-            ]
-            eq_(doc('.status-link').length, 0)
-            amo.tests.check_links(expected, doc('.more-actions-popup a'))
-
-    def test_disabled_payments_action_links_with_payments(self):
-        self.create_switch('in-app-payments')
-        self.create_switch('disabled-payments')
-        app = self.get_app()
-        for status in [amo.ADDON_PREMIUM_INAPP, amo.ADDON_FREE_INAPP]:
-            app.update(premium_type=status)
-            self.make_mine()
-            doc = pq(self.client.get(self.url).content)
-            status_link = doc('.status-link')
-            eq_(status_link.length, 1)
-            eq_(status_link.attr('href'), app.get_dev_url('versions'))
-            eq_(doc('.more-actions-popup').length, 0)
 
 
 class TestAppDashboardSorting(AppHubTest):

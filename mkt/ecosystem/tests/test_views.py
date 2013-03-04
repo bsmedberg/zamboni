@@ -7,7 +7,17 @@ from pyquery import PyQuery as pq
 
 import amo.tests
 from amo.urlresolvers import reverse
-from mkt.ecosystem.models import MdnCache
+
+
+VIEW_PAGES = (
+    'build_app_generator', 'build_apps_offline', 'build_dev_tools',
+    'build_ffos', 'build_game_apps', 'build_intro', 'build_manifests',
+    'build_mobile_developers', 'build_quick', 'build_reference',
+    'build_tools', 'build_web_developers', 'design_concept',
+    'design_fundamentals', 'design_patterns', 'design_ui', 'dev_phone',
+    'partners', 'publish_deploy', 'publish_hosted', 'publish_packaged',
+    'publish_review', 'publish_submit', 'support',
+)
 
 
 class TestLanding(amo.tests.TestCase):
@@ -23,24 +33,6 @@ class TestLanding(amo.tests.TestCase):
         r = self.client.get(self.url)
         eq_(r.status_code, 200)
         self.assertTemplateUsed(r, 'ecosystem/landing.html')
-
-    @mock.patch.object(settings, 'MDN_LAZY_REFRESH', True)
-    @mock.patch('mkt.ecosystem.views.refresh_mdn_cache')
-    def test_tutorials_refresh(self, mock_):
-        self.client.get(self.url)
-        assert not mock_.called
-
-        self.client.get(self.url, {'refresh': '1'})
-        assert mock_.called
-
-    @mock.patch.object(settings, 'MDN_LAZY_REFRESH', False)
-    @mock.patch('mkt.ecosystem.views.refresh_mdn_cache')
-    def test_tutorials_refresh_disabled(self, mock_):
-        self.client.get(self.url)
-        assert not mock_.called
-
-        self.client.get(self.url, {'refresh': '1'})
-        assert not mock_.called
 
     @mock.patch('basket.subscribe')
     def test_newsletter_form_valid(self, subscribe_mock):
@@ -72,20 +64,11 @@ class TestLanding(amo.tests.TestCase):
 
 class TestDevHub(amo.tests.TestCase):
 
-    def test_support(self):
-        r = self.client.get(reverse('ecosystem.support'))
-        eq_(r.status_code, 200)
-        self.assertTemplateUsed(r, 'ecosystem/support.html')
-
-    def test_partners(self):
-        r = self.client.get(reverse('ecosystem.partners'))
-        eq_(r.status_code, 200)
-        self.assertTemplateUsed(r, 'ecosystem/partners.html')
-
-    def test_dev_phone(self):
-        r = self.client.get(reverse('ecosystem.dev_phone'))
-        eq_(r.status_code, 200)
-        self.assertTemplateUsed(r, 'ecosystem/dev_phone.html')
+    def test_content_pages(self):
+        for page in VIEW_PAGES:
+            r = self.client.get(reverse('ecosystem.%s' % page))
+            eq_(r.status_code, 200)
+            self.assertTemplateUsed(r, 'ecosystem/%s.html' % page)
 
     def test_valid_reference_app(self):
         r = self.client.get(reverse('ecosystem.apps_documentation',
@@ -97,45 +80,3 @@ class TestDevHub(amo.tests.TestCase):
         r = self.client.get(reverse('ecosystem.apps_documentation',
                             args=['face_value_invalid']))
         eq_(r.status_code, 404)
-
-
-class TestMdnDocumentation(amo.tests.TestCase):
-    fixtures = ['ecosystem/mdncache-item']
-
-    def setUp(self):
-        self.url = reverse('ecosystem.documentation')
-
-    def test_mdn_content_default(self):
-        r = self.client.get(self.url)
-        eq_(r.status_code, 200)
-        self.assertTemplateUsed(r, 'ecosystem/documentation.html')
-
-    def test_mdn_content_design(self):
-        r = self.client.get(reverse('ecosystem.documentation',
-                            args=['principles']))
-        eq_(r.status_code, 200)
-        self.assertTemplateUsed(r, 'ecosystem/documentation.html')
-
-    def test_mdn_content_explicit(self):
-        r = self.client.get(self.url + 'old')
-        eq_(r.status_code, 200)
-        self.assertTemplateUsed(r, 'ecosystem/documentation.html')
-
-    def test_mdn_content_unknown(self):
-        r = self.client.get(self.url + 'pizza')
-        eq_(r.status_code, 404)
-        self.assertTemplateUsed(r, 'site/404.html')
-
-    def test_mdn_article_with_missing_locale(self):
-        r = self.client.get(self.url, HTTP_ACCEPT_LANGUAGE='pt-BR')
-        eq_(r.status_code, 200)
-        eq_(pq(r.content)('html').attr('lang'), 'pt-BR')
-
-    def test_mdn_content_content(self):
-        a = MdnCache.objects.filter(name='html5', locale='en-US')[0]
-        a.content = '<strong>pizza</strong>'
-        a.save()
-
-        r = self.client.get(self.url)
-        eq_(r.status_code, 200)
-        eq_(pq(r.content)('strong').text(), 'pizza')

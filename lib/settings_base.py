@@ -8,6 +8,13 @@ import socket
 from django.utils.functional import lazy
 from metlog.config import client_from_dict_config
 
+ALLOWED_HOSTS = [
+    '.allizom.org',
+    '.mozilla.org',
+    '.mozilla.com',
+    '.mozilla.net',
+]
+
 WAFFLE_TABLE_SUFFIX = 'amo'
 LOG_TABLE_SUFFIX = ''
 EVENT_TABLE_SUFFIX = ''
@@ -954,8 +961,7 @@ USERPICS_URL = STATIC_URL + '/img/uploads/userpics/%s/%s/%s.png?modified=%d'
 # paths for uploaded extensions
 COLLECTION_ICON_URL = (STATIC_URL +
         '/img/uploads/collection_icons/%s/%s.png?m=%s')
-NEW_PERSONAS_IMAGE_URL = (STATIC_URL +
-                          '/img/uploads/personas/%(id)d/%(file)s')
+NEW_PERSONAS_IMAGE_URL = STATIC_URL + '/img/uploads/themes/%(id)d/%(file)s'
 PERSONAS_IMAGE_URL = ('http://getpersonas.cdn.mozilla.net/static/'
                       '%(tens)d/%(units)d/%(id)d/%(file)s')
 PERSONAS_IMAGE_URL_SSL = ('https://getpersonas.cdn.mozilla.net/static/'
@@ -1216,6 +1222,7 @@ CSP_FRAME_SRC = ("https://s3.amazonaws.com",
                  "https://ssl.google-analytics.com",
                  "https://login.persona.org",
                  "https://native-persona.org",
+                 "https://www.youtube.com",
                 )
 CSP_FONT_SRC = ("'self'", "fonts.mozilla.org", "www.mozilla.org",)
 # self is needed for paypal which sends x-frame-options:allow when needed.
@@ -1507,8 +1514,7 @@ BROWSERID_JS_URL = 'https://login.persona.org/include.js'
 # If UNVERIFIED_ISSUER is set to None, forceIssuer will not
 # be sent to the client or the verifier.
 NATIVE_BROWSERID_DOMAIN = 'native-persona.org'
-UNVERIFIED_ISSUER = None
-#UNVERIFIED_ISSUER = 'b2g2pac.personatest.org'
+UNVERIFIED_ISSUER = 'b2g2pac.personatest.org'
 
 # This is a B2G (or other native) verifier. Adjust accordingly.
 NATIVE_BROWSERID_VERIFICATION_URL = ('https://%s/verify'
@@ -1532,3 +1538,6 @@ LANGPACK_MAX_SIZE = 5 * 1024 * 1024  # 5MB should be more than enough
 
 # Basket subscription url for newsletter signups
 BASKET_URL='https://basket.mozilla.com'
+
+# This saves us when we upgrade jingo-minify (jsocol/jingo-minify@916b054c).
+JINGO_MINIFY_USE_STATIC = False

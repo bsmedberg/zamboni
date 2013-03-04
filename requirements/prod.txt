@@ -10,8 +10,8 @@ celery-tasktree==0.3.2
 certifi==0.0.8
 chardet==1.0.1
 cssutils==0.9.7b3
-curling==0.1.9
-Django==1.4.3
+curling==0.2.1.1
+Django==1.4.5
 dj-database-url==0.2.1
 django_appcache==1.4
 django-cache-machine==0.6
@@ -31,7 +31,7 @@ django-radagast==0.3
 django-ratelimit==0.1
 django-recaptcha-mozilla==0.0.1
 django-session-csrf==0.5
-django-statsd-mozilla==0.3.8
+django-statsd-mozilla==0.3.8.6
 django-storages==1.1.4
 django-tastypie==0.9.11
 docutils==0.7
@@ -61,12 +61,13 @@ oauth2==1.5.211
 ordereddict==1.1
 PyBrowserID==0.6
 pyes==0.16.0
+PyJWT-mozilla==0.1.4.2
 PyMySQL==0.5
 pyquery==0.4
 python-dateutil==1.5
 python-gflags==2.0
 pytz==2010e
-raven==2.0.7.1
+raven==3.1.16
 rdflib==3.0.0
 recaptcha-client==1.0.5
 receipts==0.2.4.1
@@ -81,7 +82,7 @@ suds==0.3.9
 tower==0.3.4
 
 ## Not on pypi.
--e git://github.com/mozilla/amo-validator.git@8c5cd0285ef0efe25c706454c4a41fbaa0694427#egg=amo-validator
+-e git://github.com/mozilla/amo-validator.git@90ec6884023009575b085a0963d7b52b70da442b#egg=amo-validator
 -e git://github.com/mozilla/app-validator.git@9017bd3e5ed75215bf5fbad57606b0f43e9e0efb#egg=app-validator
 -e git://github.com/jsocol/commonware.git@27646ecaca40a89024cc581c3ecf5eb0fa87ee11#egg=commonware
 -e git://github.com/jbalogh/django-queryset-transform@a1ba6ae41bd86f5bb9ff66fb56614e0fafe6e022#egg=django-queryset-transform
@@ -91,7 +92,6 @@ tower==0.3.4
 # Temporary fork.
 -e git://github.com/jsocol/jingo-minify.git@d1b668ad7c0423fe8cc639df36d433da5c168cac#egg=jingo-minify
 -e git://github.com/mozilla/nuggets.git@96e80a64aa4bfcfef4f43fc3ab6966450ccd7325#egg=nuggets
--e git://github.com/rtilder/pyjwt.git@aa3be513795c1a623dfc61c6c0a688198ea5d303#egg=pyjwt
 -e git://github.com/jbalogh/test-utils.git@ce5136a257cd44a1c663319124a255c1d10a9834#egg=test-utils
 -e git://github.com/fwenzel/django-mozilla-product-details.git@36ef06539d6b34c4f345fd0d3e16937d0db9a752#egg=django-mozilla-product-details
 # TODO(Kumar) switch to PyPI release when this change has been deployed.

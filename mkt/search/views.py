@@ -1,7 +1,6 @@
 from django.shortcuts import redirect
 
 import jingo
-import waffle
 from tower import ugettext as _
 
 import amo
@@ -27,7 +26,7 @@ class FacetLink(object):
         self.null_urlparams['page'] = None
 
 
-DEFAULT_FILTERS = ['cat', 'price', 'device', 'sort']
+DEFAULT_FILTERS = ['cat', 'device', 'premium_types', 'price', 'sort']
 DEFAULT_SORTING = {
     'popularity': '-popularity',
     # TODO: Should popularity replace downloads?
@@ -40,7 +39,7 @@ DEFAULT_SORTING = {
 }
 
 
-def _filter_search(qs, query, filters=None, sorting=None,
+def _filter_search(request, qs, query, filters=None, sorting=None,
                    sorting_default='-popularity', region=None):
     """Filter an ES queryset based on a list of filters."""
     # Intersection of the form fields present and the filters we want to apply.
@@ -59,6 +58,11 @@ def _filter_search(qs, query, filters=None, sorting=None,
             qs = qs.filter(premium_type__in=amo.ADDON_FREES, price=0)
     if 'device' in show:
         qs = qs.filter(device=forms.DEVICE_CHOICES_IDS[query['device']])
+    if 'premium_types' in show:
+        if query.get('premium_types'):
+            qs = qs.filter(premium_type__in=query.get('premium_types'))
+    if 'app_type' in query and query['app_type']:
+        qs = qs.filter(app_type=query['app_type'])
     if 'sort' in show:
         sort_by = None
         if query['sort'] in sorting:
@@ -124,9 +128,9 @@ def sort_sidebar(query, form):
             for key, text in form.fields['sort'].choices]
 
 
-def _get_query(region, gaia, mobile, tablet):
-    return Webapp.from_search(region=region, gaia=gaia,
-                              mobile=mobile, tablet=tablet).facet('category')
+def _get_query(region, gaia, mobile, tablet, status=amo.STATUS_PUBLIC):
+    return Webapp.from_search(region=region, gaia=gaia, mobile=mobile,
+                              tablet=tablet, status=status).facet('category')
 
 
 def _app_search(request, category=None, browse=None):
@@ -145,7 +149,7 @@ def _app_search(request, category=None, browse=None):
     qs = _get_query(region, gaia=request.GAIA, mobile=request.MOBILE,
                     tablet=request.TABLET)
 
-    qs = _filter_search(qs, dict(query), region=region)
+    qs = _filter_search(request, qs, dict(query), region=region)
 
     # If we're mobile, leave no witnesses. (i.e.: hide "Applied Filters:
     # Mobile")

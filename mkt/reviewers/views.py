@@ -6,7 +6,6 @@ import traceback
 
 from django import http
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Q
 from django.forms.formsets import formset_factory
@@ -33,6 +32,7 @@ from amo.models import manual_order
 from amo.urlresolvers import reverse
 from amo.utils import (escape_all, HttpResponseSendFile, JSONEncoder, paginate,
                        smart_decode)
+from devhub.models import ActivityLog
 from editors.forms import MOTDForm
 from editors.models import (EditorSubscription, EscalationQueue, RereviewQueue,
                             ReviewerScore)
@@ -46,8 +46,7 @@ from users.models import UserProfile
 from zadmin.models import get_config, set_config
 
 import mkt.constants.reviewers as rvw
-from mkt.developers.models import ActivityLog
-from mkt.reviewers.utils import clean_sort_param
+from mkt.reviewers.utils import AppsReviewing, clean_sort_param
 from mkt.site.helpers import product_as_dict
 from mkt.webapps.models import Webapp
 
@@ -236,10 +235,10 @@ def _review(request, addon):
     # We only allow the user to check/uncheck files for "pending"
     allow_unchecking_files = form.helper.review_type == "pending"
 
-    versions = (Version.objects.filter(addon=addon)
-                               .order_by('-created')
-                               .transform(Version.transformer_activity)
-                               .transform(Version.transformer))
+    versions = (Version.with_deleted.filter(addon=addon)
+                                    .order_by('-created')
+                                    .transform(Version.transformer_activity)
+                                    .transform(Version.transformer))
 
     product_attrs = {
         'product': json.dumps(
@@ -452,7 +451,7 @@ def _queue_to_apps(request, queue_qs):
 
     # Put the filtered qs back into the correct sort order.
     qs = manual_order(qs, sorted_app_ids, 'addons.id')
-    apps = [QueuedApp(app, app.created) for app in qs]
+    [QueuedApp(app, app.created) for app in qs]
 
     return qs, search_form
 
@@ -1010,24 +1009,6 @@ def leaderboard(request):
 @permission_required('Apps', 'Review')
 @json_view
 def apps_reviewing(request):
-    ids = []
-    key = '%s:myapps:%s' % (settings.CACHE_PREFIX, request.amo_user.id)
-    my_apps = cache.get(key)
-    if my_apps:
-        for id in my_apps.split(','):
-            valid = cache.get('%s:review_viewing:%s' % (settings.CACHE_PREFIX,
-                                                        id))
-            if valid and valid == request.amo_user.id:
-                ids.append(id)
-
-    apps = []
-    for app in Webapp.objects.filter(id__in=ids):
-        apps.append({
-            'app': app,
-            'app_attrs': json.dumps(
-                product_as_dict(request, app, False, 'reviewer'),
-                cls=JSONEncoder),
-        })
 
     return jingo.render(request, 'reviewers/apps_reviewing.html', context(**{
-        'apps': apps}))
+        'apps': AppsReviewing(request).get_apps()}))

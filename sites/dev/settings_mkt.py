@@ -6,9 +6,9 @@ from settings_base import *
 
 import private_mkt
 
+DOMAIN = 'marketplace-dev.allizom.org'
 SERVER_EMAIL = 'zmarketplacedev@addons.mozilla.org'
 
-DOMAIN = "marketplace-dev.allizom.org"
 SITE_URL = 'https://marketplace-dev.allizom.org'
 SERVICES_URL = SITE_URL
 STATIC_URL = 'https://marketplace-dev-cdn.allizom.org/'
@@ -163,25 +163,20 @@ USE_METLOG_FOR_TASTYPIE = True
 
 GOOGLE_ANALYTICS_DOMAIN = 'marketplace.firefox.com'
 
-# Allow /developers/?refresh to refresh all MDN content for Developer Hub.
-MDN_LAZY_REFRESH = True
-
 SENTRY_CLIENT = 'djangoraven.metlog.MetlogDjangoClient'
 
 # Pass through the DSN to the Raven client and force signal
 # registration so that exceptions are passed through to sentry
 RAVEN_CONFIG = {'dsn': SENTRY_DSN, 'register_signals': True}
 
-# This is the iss (issuer) for app purchase JWTs.
-# It must match that of the pay server that processes nav.mozPay().
-# In webpay this is the ISSUER setting.
-APP_PURCHASE_KEY = 'marketplace-dev.allizom.org'
-
-# This is the shared secret key for signing app purchase JWTs.
-# It must match that of the pay server that processes nav.mozPay().
-# In webpay this is the SECRET setting.
+# See mkt/settings.py for more info.
+APP_PURCHASE_KEY = DOMAIN
+APP_PURCHASE_AUD = DOMAIN
+APP_PURCHASE_TYP = 'mozilla-dev/payments/pay/v1'
 APP_PURCHASE_SECRET = private_mkt.APP_PURCHASE_SECRET
 
 # We upgraded to jQuery 1.9.1. Run this command to include jquery-migrate in the JS
 # bundle to see which APIs and features were removed from jQuery core.
 MINIFY_BUNDLES['js'].update(asset_bundles.jquery_migrated())
+
+MONOLITH_PASSWORD = private_mkt.MONOLITH_PASSWORD

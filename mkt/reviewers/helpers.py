@@ -12,7 +12,8 @@ from amo.helpers import impala_breadcrumbs
 from amo.urlresolvers import reverse
 
 from mkt.developers.helpers import mkt_page_title
-from mkt.reviewers.utils import clean_sort_param, create_sort_link
+from mkt.reviewers.utils import (AppsReviewing, clean_sort_param,
+                                 create_sort_link)
 
 
 @register.function
@@ -70,6 +71,7 @@ def queue_tabnav(context):
                                         page_url, tab_text)
     """
     counts = context['queue_counts']
+    apps_reviewing = AppsReviewing(context['request']).get_apps()
 
     # Apps.
     if acl.action_allowed(context['request'], 'Apps', 'Review'):
@@ -88,11 +90,13 @@ def queue_tabnav(context):
                  _('Escalations ({0})',
                    counts['escalated']).format(counts['escalated']))
             )
-        rv.append(
+        rv.extend([
             ('apps', 'moderated', 'queue_moderated',
              _('Moderated Reviews ({0})',
                counts['moderated']).format(counts['moderated'])),
-        )
+            ('apps', '', 'apps_reviewing',
+             _('Reviewing ({0})').format(len(apps_reviewing))),
+        ])
     else:
         rv = []
 

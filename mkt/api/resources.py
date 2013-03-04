@@ -4,11 +4,11 @@ from django.db import transaction
 
 from celery_tasktree import TaskTree
 import commonware.log
-from tastypie import http
+from tastypie import fields, http
+from tastypie.authorization import Authorization
 from tastypie.exceptions import ImmediateHttpResponse
-from tastypie import fields
-from tastypie.serializers import Serializer
 from tastypie.resources import ALL_WITH_RELATIONS
+from tastypie.serializers import Serializer
 
 import amo
 from addons.forms import CategoryFormSet
@@ -17,7 +17,9 @@ from amo.decorators import write
 from amo.utils import no_translation
 from constants.applications import DEVICE_TYPES
 from files.models import FileUpload, Platform
-from mkt.api.authentication import (AppOwnerAuthorization, OwnerAuthorization,
+from mkt.api.authentication import (AppOwnerAuthorization,
+                                    OptionalAuthentication,
+                                    OwnerAuthorization,
                                     MarketplaceAuthentication)
 from mkt.api.base import MarketplaceResource
 from mkt.api.forms import (CategoryForm, DeviceTypeForm, NewPackagedForm,
@@ -35,12 +37,10 @@ class ValidationResource(MarketplaceResource):
         queryset = FileUpload.objects.all()
         fields = ['valid', 'validation']
         list_allowed_methods = ['post']
-        allowed_methods = ['get']
+        detail_allowed_methods = ['get']
         always_return_data = True
-        authentication = MarketplaceAuthentication()
-        # This will return that anyone can do anything because objects
-        # don't always get passed the authorization handler.
-        authorization = OwnerAuthorization()
+        authentication = OptionalAuthentication()
+        authorization = Authorization()
         resource_name = 'validation'
         serializer = Serializer(formats=['json'])
 
@@ -55,7 +55,8 @@ class ValidationResource(MarketplaceResource):
             raise self.form_errors(form)
 
         if not packaged:
-            upload = FileUpload.objects.create(user=amo.get_user())
+            upload = FileUpload.objects.create(
+                         user=getattr(request, 'amo_user', None))
             # The hosted app validator is pretty fast.
             tasks.fetch_manifest(form.cleaned_data['manifest'], upload.pk)
         else:
@@ -77,9 +78,6 @@ class ValidationResource(MarketplaceResource):
             obj = FileUpload.objects.get(pk=kwargs['pk'])
         except FileUpload.DoesNotExist:
             raise ImmediateHttpResponse(response=http.HttpNotFound())
-
-        if not OwnerAuthorization().is_authorized(request, object=obj):
-            raise ImmediateHttpResponse(response=http.HttpForbidden())
 
         log.info('Validation retreived: %s' % obj.pk)
         return obj
@@ -108,7 +106,7 @@ class AppResource(MarketplaceResource):
         list_allowed_methods = ['get', 'post']
         allowed_methods = ['get', 'put']
         always_return_data = True
-        authentication = MarketplaceAuthentication()
+        authentication = OptionalAuthentication()
         authorization = AppOwnerAuthorization()
         resource_name = 'app'
         serializer = Serializer(formats=['json'])
@@ -144,7 +142,7 @@ class AppResource(MarketplaceResource):
         pipeline.apply_async()
 
     def obj_get(self, request=None, **kwargs):
-        obj = self.get_and_check_ownership(request, **kwargs)
+        obj = self.get_and_check_ownership(request, allow_anon=True, **kwargs)
         log.info('App retreived: %s' % obj.pk)
         return obj
 
@@ -162,13 +160,17 @@ class AppResource(MarketplaceResource):
                 'form-MAX_NUM_FORMS': '',
                 'form-0-categories': cats}
 
-    def get_and_check_ownership(self, request, **kwargs):
+    def get_and_check_ownership(self, request, allow_anon=False, **kwargs):
         try:
             # Use queryset, not get_object_list to ensure a distinction
             # between a 404 and a 403.
             obj = self._meta.queryset.get(**kwargs)
         except Addon.DoesNotExist:
             raise ImmediateHttpResponse(response=http.HttpNotFound())
+
+        # If it's public, just return it.
+        if allow_anon and obj.is_public():
+            return obj
 
         # Now do the final check to see if you are allowed to see it and
         # return a 403 if you can't.
@@ -210,6 +212,7 @@ class AppResource(MarketplaceResource):
         with no_translation():
             bundle.data['device_types'] = [str(n.name).lower()
                                            for n in obj.device_types]
+        bundle.data['app_type'] = obj.app_type
         return bundle
 
     def get_object_list(self, request):

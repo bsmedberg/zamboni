@@ -41,7 +41,7 @@
 
     {% if waffle.switch('allow-b2g-paid-submission') %}
       <div class="paid tab">
-        <h2 id="paid-tab-header"><a href="#">{{ _('Paid') }}</a></h2>
+        <h2 id="paid-tab-header"><a href="#">{{ _('Paid / In-app') }}</a></h2>
         <div class="error">{{ form.errors.paid_platforms }}</div>
         {%- for item in form.fields['paid_platforms'].choices -%}
           {{ button(form, item) }}
@@ -86,7 +86,7 @@
     </div>
 
     <div class="packaged tab">
-      <h2 id="packaged-tab-header"><a href="#">Packaged</a></h2>
+      <h2 id="packaged-tab-header"><a href="#">{{ _('Packaged') }}</a></h2>
       <input type="file" id="upload-app" data-upload-url="{{ url('mkt.developers.upload') }}" />
     </div>
 

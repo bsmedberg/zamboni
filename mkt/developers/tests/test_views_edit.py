@@ -23,13 +23,13 @@ from addons.forms import AddonFormBasic
 from addons.models import (Addon, AddonCategory, AddonDeviceType, AddonUser,
                            Category)
 from constants.applications import DEVICE_TYPES
+from devhub.models import ActivityLog
 from lib.video.tests import files as video_files
 from users.models import UserProfile
 
 import mkt
 from mkt.constants import APP_IMAGE_SIZES
 from mkt.constants.ratingsbodies import RATINGS_BODIES
-from mkt.developers.models import ActivityLog
 from mkt.site.fixtures import fixture
 from mkt.webapps.models import (AddonExcludedRegion as AER, ContentRating,
                                 ImageAsset)
@@ -1245,6 +1245,38 @@ class TestAdminSettings(TestAdmin):
 
         # Test POST. Ignore errors.
         eq_(self.client.post(self.edit_url).status_code, 403)
+
+    def test_content_flag_add(self):
+        self.log_in_with('Apps:Configure')
+        data = {'position': '-1',
+                'adult_content': 'on',
+                'child_content': 'on'
+                }
+        r = self.client.post(self.edit_url, formset(**data))
+        eq_(r.status_code, 200)
+        webapp = self.get_webapp()
+        eq_(webapp.has_flag('adult_content'), True)
+        eq_(webapp.has_flag('child_content'), True)
+
+    def test_content_flag_update(self):
+        self.log_in_with('Apps:Configure')
+        data = {'position': '-1',
+                'child_content': 'on'
+                }
+        r = self.client.post(self.edit_url, formset(**data))
+        eq_(r.status_code, 200)
+        webapp = self.get_webapp()
+        eq_(webapp.has_flag('adult_content'), False)
+        eq_(webapp.has_flag('child_content'), True)
+
+        data = {'position': '-1',
+                'adult_content': 'on'
+                }
+        r = self.client.post(self.edit_url, formset(**data))
+        eq_(r.status_code, 200)
+        webapp = self.get_webapp()
+        eq_(webapp.has_flag('adult_content'), True)
+        eq_(webapp.has_flag('child_content'), False)
 
     def test_ratings_edit_add(self):
         self.log_in_with('Apps:Configure')

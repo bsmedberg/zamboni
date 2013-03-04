@@ -21,12 +21,13 @@ from jinja2.filters import do_dictsort
 import caching.base as caching
 import commonware.log
 import json_field
-from tower import ugettext_lazy as _
 import waffle
+from tower import ugettext_lazy as _
 
 from addons.utils import get_featured_ids, get_creatured_ids
 
 import amo.models
+import mkt.constants
 from amo.decorators import use_master
 from amo.fields import DecimalCharField
 from amo.helpers import absolutify, shared_url
@@ -1023,6 +1024,17 @@ class Addon(amo.models.OnChangeMixin, amo.models.ModelBase):
                 return 10 - days_ago.days
         return 0
 
+    def has_flag(self, flag_name):
+        """Lookup boolean flag.
+
+        False if flag isn't set or doesn't exist.
+        """
+        try:
+            flag = getattr(self.flag, flag_name, False)
+        except Flag.DoesNotExist:
+            flag = False
+        return flag
+
     def is_persona(self):
         return self.type == amo.ADDON_PERSONA
 
@@ -1490,6 +1502,11 @@ class Addon(amo.models.OnChangeMixin, amo.models.ModelBase):
             return old_locale, locale
         return None
 
+    @property
+    def app_type(self):
+        # Not implemented for non-webapps.
+        return ''
+
 
 class AddonDeviceType(amo.models.ModelBase):
     addon = models.ForeignKey(Addon)
@@ -1625,7 +1642,7 @@ class Persona(caching.CachingMixin, models.Model):
     def thumb_url(self):
         """URL to Persona's thumbnail preview."""
         if self.is_new():
-            return self._image_url('thumb.jpg')
+            return self._image_url('preview.png')
         else:
             return self._image_url('preview.jpg')
 
@@ -1633,7 +1650,7 @@ class Persona(caching.CachingMixin, models.Model):
     def icon_url(self):
         """URL to personas square preview."""
         if self.is_new():
-            return self._image_url('icon.jpg')
+            return self._image_url('icon.png')
         else:
             return self._image_url('preview_small.jpg')
 
@@ -1641,7 +1658,7 @@ class Persona(caching.CachingMixin, models.Model):
     def preview_url(self):
         """URL to Persona's big, 680px, preview."""
         if self.is_new():
-            return self._image_url('preview.jpg')
+            return self._image_url('preview.png')
         else:
             return self._image_url('preview_large.jpg')
 
@@ -1830,6 +1847,12 @@ class Category(amo.models.ModelBase):
 
     addons = models.ManyToManyField(Addon, through='AddonCategory')
 
+    # Used for operator shelves and magic categories.
+    carrier = models.PositiveIntegerField(
+        choices=mkt.constants.CARRIER_IDS, null=True)
+    region = models.PositiveIntegerField(
+        choices=mkt.constants.REGIONS_CHOICES_ID, null=True)
+
     class Meta:
         db_table = 'categories'
         verbose_name_plural = 'Categories'
@@ -1874,6 +1897,18 @@ class Feature(amo.models.ModelBase):
     def __unicode__(self):
         app = amo.APP_IDS[self.application.id].pretty
         return '%s (%s: %s)' % (self.addon.name, app, self.locale)
+
+
+class Flag(amo.models.ModelBase):
+    addon = models.OneToOneField(Addon)
+    adult_content = models.BooleanField(default=False, db_index=True)
+    child_content = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        db_table = 'flags'
+
+    def __unicode__(self):
+        return u"%s flags" % self.addon.name
 
 
 class Preview(amo.models.ModelBase):

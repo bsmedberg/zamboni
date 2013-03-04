@@ -7,6 +7,11 @@ from addons.models import Category
 import amo
 
 
+STATUS_CHOICES = []
+for status in amo.WEBAPPS_UNLISTED_STATUSES + (amo.STATUS_PUBLIC,):
+    s = amo.STATUS_CHOICES_API[status]
+    STATUS_CHOICES.append((s, s))
+
 SORT_CHOICES = [
     (None, _lazy(u'Relevance')),
     ('popularity', _lazy(u'Popularity')),
@@ -31,7 +36,6 @@ DEVICE_CHOICES = [
     ('tablet', _lazy(u'Tablet')),
 ]
 
-# TODO: Forgo the `DeviceType` model in favor of constants (see bug 727235).
 DEVICE_CHOICES_IDS = {
     'desktop': amo.DEVICE_DESKTOP.id,
     'mobile': amo.DEVICE_MOBILE.id,
@@ -114,12 +118,41 @@ class AppListForm(AppSearchForm):
 class ApiSearchForm(forms.Form):
     # Like App search form, but just filtering on categories for now
     # and bit more strict about the filtering.
+    q = forms.CharField(required=False)
+    status = forms.ChoiceField(required=False, choices=STATUS_CHOICES)
     sort = forms.ChoiceField(required=False, choices=LISTING_SORT_CHOICES)
     cat = forms.TypedChoiceField(required=False, coerce=int, empty_value=None,
                                  choices=[])
+    device = forms.ChoiceField(required=False, choices=DEVICE_CHOICES)
+    premium_types = forms.MultipleChoiceField(
+        required=False,
+        choices=tuple((p, p) for p in amo.ADDON_PREMIUM_API.values()))
+    app_type = forms.ChoiceField(
+        required=False,
+        choices=tuple((t, t) for t in amo.ADDON_WEBAPP_TYPES.values()))
 
     def __init__(self, *args, **kw):
         super(ApiSearchForm, self).__init__(*args, **kw)
         CATS = (Category.objects.filter(type=amo.ADDON_WEBAPP, weight__gte=0)
                          .values_list('id', flat=True))
         self.fields['cat'].choices = [(pk, pk) for pk in CATS]
+
+    def clean_status(self):
+        status = self.cleaned_data['status']
+        return amo.STATUS_CHOICES_API_LOOKUP.get(status, amo.STATUS_PUBLIC)
+
+    def clean_premium_types(self):
+        pt_ids = []
+        for pt in self.cleaned_data.get('premium_types'):
+            pt_id = amo.ADDON_PREMIUM_API_LOOKUP.get(pt)
+            if pt_id is not None:
+                pt_ids.append(pt_id)
+        if pt_ids:
+            return pt_ids
+        return []
+
+    def clean_app_type(self):
+        app_type = amo.ADDON_WEBAPP_TYPES_LOOKUP.get(
+            self.cleaned_data.get('app_type'))
+        if app_type:
+            return app_type

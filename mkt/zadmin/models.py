@@ -9,6 +9,7 @@ from addons.models import Category
 
 import amo
 import mkt
+import mkt.regions
 from mkt.carriers import get_carrier
 
 
@@ -42,8 +43,7 @@ class FeaturedAppQuerySet(models.query.QuerySet):
         if waffle.switch_is_active('disabled-payments') or not gaia:
             qs = qs.filter(app__premium_type__in=amo.ADDON_FREES)
 
-        if cat:
-            qs = qs.for_category(cat)
+        qs = qs.for_category(cat)
 
         carrier = get_carrier()
         if carrier:
@@ -57,6 +57,8 @@ class FeaturedAppQuerySet(models.query.QuerySet):
         if tablet:
             qs = qs.tablet()
 
+        qs_pre_region = qs._clone()
+
         if region:
             qs = qs.for_region(region).exclude(app__id__in=excluded)
 
@@ -64,7 +66,7 @@ class FeaturedAppQuerySet(models.query.QuerySet):
             if limit:
                 empty_spots = limit - qs.count()
                 if empty_spots > 0 and region != mkt.regions.WORLDWIDE:
-                    qs |= (FeaturedApp.objects.active().worldwide()
+                    qs |= (qs_pre_region.worldwide()
                            .exclude(id__in=[x.id for x in qs])
                            .exclude(app__id__in=excluded))
 
@@ -179,7 +181,8 @@ class FeaturedAppManager(amo.models.ManagerBase):
                 raise orig
 
     def get_query_set(self):
-        return FeaturedAppQuerySet(self.model)
+        return FeaturedAppQuerySet(self.model).exclude(
+            app__status=amo.STATUS_DELETED)
 
 
 class FeaturedApp(amo.models.ModelBase):

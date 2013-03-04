@@ -4,7 +4,7 @@ import os
 from lib.settings_base import *
 from mkt import asset_bundles
 
-
+ALLOWED_HOSTS += ['.firefox.com']
 # We'll soon need a `settings_test_mkt` to override this.
 APP_PREVIEW = True
 
@@ -35,7 +35,7 @@ USE_CARRIER_URLS = True
 # When a URL is prefixed with one of these values, the value will be
 # available in mkt.carriers.get_carrier() and will be hidden from all other
 # url resolvers.
-CARRIER_URLS = ['telefonica', 'sony']
+CARRIER_URLS = ['telefonica']
 
 MKT_FEEDBACK_EMAIL = 'apps-feedback@mozilla.com'
 MKT_REVIEWERS_EMAIL = 'app-reviews@mozilla.org'
@@ -74,6 +74,7 @@ INSTALLED_APPS += (
     'mkt.home',
     'mkt.inapp_pay',
     'mkt.lookup',
+    'mkt.monolith',
     'mkt.offline',
     'mkt.purchase',
     'mkt.ratings',
@@ -106,11 +107,12 @@ MIDDLEWARE_CLASSES.remove('amo.middleware.LocaleAndAppURLMiddleware')
 MIDDLEWARE_CLASSES += [
     'mkt.site.middleware.RedirectPrefixedURIMiddleware',
     'mkt.site.middleware.LocaleMiddleware',
-    'mkt.site.middleware.RegionMiddleware',
 
+    'mkt.regions.middleware.RegionMiddleware',
     'mkt.fragments.middleware.VaryOnAJAXMiddleware',
     'mkt.site.middleware.DeviceDetectionMiddleware',
     'mkt.fragments.middleware.HijackRedirectMiddleware',
+    'mkt.api.middleware.CORSMiddleware'
 ]
 
 TEMPLATE_DIRS += (path('mkt/templates'), path('mkt/zadmin/templates'))
@@ -141,7 +143,8 @@ NO_ADDONS_MODULES = (
     'browse.views.themes',
 )
 
-# Extend the bundles.
+# Extend AMO's bundles. Sorry, folks. One day when admin goes away this
+# will be easier.
 MINIFY_BUNDLES['css'].update(asset_bundles.CSS)
 MINIFY_BUNDLES['js'].update(asset_bundles.JS)
 
@@ -325,6 +328,3 @@ APP_PURCHASE_AUD = 'marketplace-dev.allizom.org'
 # It must match that of the pay server that processes nav.mozPay().
 # On B2G this must match a provider in the whitelist.
 APP_PURCHASE_TYP = 'mozilla/payments/pay/v1'
-
-# Allow /developers/?refresh to refresh all MDN content for Developer Hub.
-MDN_LAZY_REFRESH = False

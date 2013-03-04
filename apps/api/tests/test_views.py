@@ -502,9 +502,8 @@ class APITest(TestCase):
                             '<thumbnail type="" width="200" height="150">')
 
     def test_performance_data(self):
-        with self.assertNumQueries(30):
-            response = self.client.get('/en-US/firefox/api/%.1f/addon/3615' %
-                                       api.CURRENT_VERSION)
+        response = self.client.get('/en-US/firefox/api/%.1f/addon/3615' %
+                                   api.CURRENT_VERSION)
         doc = pq(response.content)
         eq_(doc('performance application').eq(0).attr('name'), 'fx')
         eq_(doc('performance application').eq(0).attr('version'), '3.6')
@@ -697,6 +696,8 @@ class AddonFilterTest(TestCase):
         platform, _ = Platform.objects.get_or_create(pk=amo.PLATFORM_WIN.id)
         file = self.addon1.current_version.files.all()[0]
         file.update(platform=platform)
+        # Transformers don't know 'bout my files.
+        self.addons[0] = Addon.objects.get(pk=self.addons[0].pk)
         addons = addon_filter(
             **self._defaults(platform=amo.PLATFORM_LINUX.shortname))
         eq_(addons, [self.addon2])

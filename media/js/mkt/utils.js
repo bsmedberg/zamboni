@@ -12,6 +12,16 @@ function fieldFocused(e) {
 }
 
 
+function postUnsaved(data) {
+    $('input[name="unsaved_data"]').val(JSON.stringify(data));
+}
+
+
+function loadUnsaved() {
+    return JSON.parse($('input[name="unsaved_data"]').val() || '{}');
+}
+
+
 var escape_ = function(s) {
     if (s === undefined) {
         return;
@@ -32,12 +42,6 @@ function wait(ms) {
 
 
 _.extend(String.prototype, {
-    startsWith: function(str) {
-        return this.slice(0, str.length) == str;
-    },
-    endsWith: function(str) {
-        return this.slice(-str.length) == str;
-    },
     trim: function(str) {
         // Trim leading and trailing whitespace (like lstrip + rstrip).
         return this.replace(/^\s*/, '').replace(/\s*$/, '');
@@ -47,30 +51,6 @@ _.extend(String.prototype, {
         return this.replace(/\s/g, '');
     }
 });
-
-
-// Sample usage:
-// ['/en-US/apps/', '/ja/search/', '/fr/contact/'].startsWith('/en-US/')
-Array.prototype.startsWith = function(str) {
-    for (var i = 0; i < this.length; i++) {
-        if (str.startsWith(this[i])) {
-            return true;
-        }
-    }
-    return false;
-};
-
-
-// .exists()
-// This returns true if length > 0.
-$.fn.exists = function(callback, args) {
-    var $this = $(this),
-        len = $this.length;
-    if (len && callback) {
-        callback.apply(null, args);
-    }
-    return !!len;
-};
 
 function makeOrGetOverlay(opts) {
     var classes = 'overlay',
@@ -98,7 +78,11 @@ function getTemplate($el) {
 }
 
 // Initializes character counters for textareas.
-function initCharCount() {
+function initCharCount(parent) {
+    /*
+    parent - An optional parameter that allows the effects of this function to
+             be limited to a single node rather than the whole document.
+    */
     var countChars = function(el, cc) {
         var $el = $(el),
             val = $el.val(),
@@ -106,14 +90,15 @@ function initCharCount() {
             left = max - val.length,
             cc_parent = cc.parent();
         // L10n: {0} is the number of characters left.
-        cc.html(format(ngettext('<b>{0}</b> character left.',
-                                '<b>{0}</b> characters left.', left), [left]))
+        cc.html(format(ngettext('{0} character left.',
+                                '{0} characters left.', left), [left]))
           .toggleClass('error', left < 0);
         if(left >= 0 && cc_parent.hasClass('error')) {
             cc_parent.removeClass('error');
         }
     };
-    $('.char-count').each(function() {
+    $('.char-count', parent).each(function() {
+        var $this = $(this)
         var $cc = $(this),
             $form = $(this).closest('form'),
             $el;
@@ -148,10 +133,4 @@ $(document).ajaxSuccess(function(event, xhr, ajaxSettings) {
     if (z.capabilities.chromeless) {
         $(this).attr('target', '_blank');
     }
-});
-
-
-// If any field changes, submit the form.
-$('form.go').change(function() {
-    this.submit();
 });

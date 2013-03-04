@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import hashlib
-import os
-import shutil
 
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -168,7 +166,36 @@ class TestVersion(amo.tests.TestCase):
     def test_version_delete(self):
         version = Version.objects.get(pk=81551)
         version.delete()
-        assert Addon.uncached.get(pk=3615)
+
+        addon = Addon.uncached.get(pk=3615)
+        assert not Version.objects.filter(addon=addon).exists()
+        assert not Version.with_deleted.filter(addon=addon).exists()
+
+    @mock.patch('versions.models.settings.MARKETPLACE', True)
+    @mock.patch('versions.models.storage')
+    def test_version_delete_marketplace(self, storage_mock):
+        version = Version.objects.get(pk=81551)
+        version.delete()
+        addon = Addon.uncached.get(pk=3615)
+        assert addon
+
+        assert not Version.objects.filter(addon=addon).exists()
+        assert Version.with_deleted.filter(addon=addon).exists()
+
+        assert not storage_mock.delete.called
+
+    @mock.patch('versions.models.settings.MARKETPLACE', True)
+    @mock.patch('versions.models.storage')
+    def test_packaged_version_delete_marketplace(self, storage_mock):
+        addon = Addon.uncached.get(pk=3615)
+        addon.update(is_packaged=True)
+        version = Version.objects.get(pk=81551)
+        version.delete()
+
+        assert not Version.objects.filter(addon=addon).exists()
+        assert Version.with_deleted.filter(addon=addon).exists()
+
+        assert storage_mock.delete.called
 
     def test_version_delete_files(self):
         version = Version.objects.get(pk=81551)
@@ -179,6 +206,7 @@ class TestVersion(amo.tests.TestCase):
     def test_version_delete_logs(self):
         user = UserProfile.objects.get(pk=55021)
         amo.set_user(user)
+        # The transform don't know bout my users.
         version = Version.objects.get(pk=81551)
         eq_(ActivityLog.objects.count(), 0)
         version.delete()
@@ -187,6 +215,8 @@ class TestVersion(amo.tests.TestCase):
     def test_version_is_allowed_upload(self):
         version = Version.objects.get(pk=81551)
         version.files.all().delete()
+        # The transform don't know bout my deletions.
+        version = Version.objects.get(pk=81551)
         assert version.is_allowed_upload()
 
     def test_version_is_not_allowed_upload(self):
@@ -197,9 +227,11 @@ class TestVersion(amo.tests.TestCase):
                          amo.PLATFORM_BSD.id]:
             file = File(platform_id=platform, version=version)
             file.save()
+        version = Version.objects.get(pk=81551)
         assert version.is_allowed_upload()
         file = File(platform_id=amo.PLATFORM_MAC.id, version=version)
         file.save()
+        # The transform don't know bout my new files.
         version = Version.uncached.get(pk=81551)
         assert not version.is_allowed_upload()
 
@@ -211,6 +243,8 @@ class TestVersion(amo.tests.TestCase):
                          amo.PLATFORM_MAC.id]:
             file = File(platform_id=platform, version=version)
             file.save()
+        # The transform don't know bout my new files.
+        version = Version.objects.get(pk=81551)
         assert not version.is_allowed_upload()
 
     def test_version_is_allowed_upload_search(self):
@@ -218,6 +252,8 @@ class TestVersion(amo.tests.TestCase):
         version.addon.type = amo.ADDON_SEARCH
         version.addon.save()
         version.files.all()[0].delete()
+        # The transform don't know bout my deletions.
+        version = Version.objects.get(pk=81551)
         assert version.is_allowed_upload()
 
     def test_version_is_not_allowed_upload_search(self):
@@ -806,16 +842,16 @@ class TestExtensionVersionFromUpload(TestVersionFromUpload):
             uploaded_hash = hashlib.md5(f.read()).hexdigest()
         version = Version.from_upload(self.upload, self.addon, platforms)
         assert not storage.exists(self.upload.path), (
-                "Expected original upload to move but it still exists.")
+            "Expected original upload to move but it still exists.")
         files = version.all_files
         eq_(len(files), 2)
         eq_(sorted([f.platform.id for f in files]),
             sorted([p.id for p in platforms]))
         eq_(sorted([f.filename for f in files]),
             [u'delicious_bookmarks-0.1-fx-%s.xpi' % (
-                        amo.PLATFORM_LINUX.shortname),
+                amo.PLATFORM_LINUX.shortname),
              u'delicious_bookmarks-0.1-fx-%s.xpi' % (
-                        amo.PLATFORM_MAC.shortname)])
+                 amo.PLATFORM_MAC.shortname)])
         for file in files:
             with storage.open(file.file_path) as f:
                 eq_(uploaded_hash,

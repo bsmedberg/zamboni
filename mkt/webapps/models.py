@@ -303,7 +303,12 @@ class Webapp(Addon):
         file_ = file_obj or self.get_latest_file()
         if not file_:
             return
-        return WebAppParser().get_json_data(file_.file_path)
+        if self.status == amo.STATUS_REJECTED:
+            file_path = file_.guarded_file_path
+        else:
+            file_path = file_.file_path
+
+        return WebAppParser().get_json_data(file_path)
 
     def share_url(self):
         return reverse('apps.share', args=[self.app_slug])
@@ -479,7 +484,7 @@ class Webapp(Addon):
             all_ids = mkt.regions.REGION_IDS
         excluded = list(self.addonexcludedregion
                             .values_list('region', flat=True))
-        return list(set(all_ids) - set(excluded))
+        return sorted(list(set(all_ids) - set(excluded)))
 
     def get_regions(self):
         """
@@ -523,7 +528,7 @@ class Webapp(Addon):
         return datetime.date.today()
 
     @classmethod
-    def featured(cls, cat=None, region=None, limit=6, mobile=False,
+    def featured(cls, cat=None, region=None, limit=9, mobile=False,
                  gaia=False):
         qs = FeaturedApp.objects.featured(cat, region, limit, mobile, gaia)
         return [w.app for w in qs]
@@ -535,11 +540,9 @@ class Webapp(Addon):
                     .values_list('addon', flat=True))
 
     @classmethod
-    def from_search(cls, cat=None, region=None, gaia=False,
-                    mobile=False, tablet=False):
-        filters = dict(type=amo.ADDON_WEBAPP,
-                       status=amo.STATUS_PUBLIC,
-                       is_disabled=False)
+    def from_search(cls, cat=None, region=None, gaia=False, mobile=False,
+                    tablet=False, status=amo.STATUS_PUBLIC):
+        filters = dict(type=amo.ADDON_WEBAPP, status=status, is_disabled=False)
 
         if cat:
             filters.update(category=cat.id)
@@ -722,6 +725,13 @@ class Webapp(Addon):
         crud = self.update_names(locale_names)
         if any(crud.values()):
             self.save()
+
+    @property
+    def app_type(self):
+        # Returns string of 'hosted' or 'packaged'. Used in the API.
+        key = (amo.ADDON_WEBAPP_PACKAGED if self.is_packaged else
+               amo.ADDON_WEBAPP_HOSTED)
+        return amo.ADDON_WEBAPP_TYPES[key]
 
 
 # Pull all translated_fields from Addon over to Webapp.

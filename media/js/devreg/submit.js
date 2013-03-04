@@ -37,7 +37,8 @@
         });
     };
 
-    var $compat_save_button = $('#compat-save-button');
+    var $compat_save_button = $('#compat-save-button'),
+        isSubmitAppPage = $('#page > #submit-payment-type').length > 0;
 
     // Reset selected device buttons and values.
     $('#submit-payment-type h2 a').click(function(e) {
@@ -45,9 +46,9 @@
             return;
         }
 
-        $('#submit-payment-type a.choice').removeClass('selected')
-                                          .find('input').removeAttr('checked');
-        $('#id_free_platforms, #id_paid_platforms').val([]);
+        if (isSubmitAppPage) {
+            nullifySelections();
+        }
     });
 
     // When a big device button is clicked, update the form.
@@ -66,27 +67,48 @@
                 delete old[old.indexOf(val)];
             }
             $this.toggleClass('selected', nowSelected);
-            $this.find('input').attr('checked', nowSelected);
+            $this.find('input').prop('checked', nowSelected);
             $input.val(old);
             $compat_save_button.removeClass('hidden');
-            show_packaged();
+            setTabState();
         })
     );
 
-    // Show packaged.
-    function show_packaged() {
+    function nullifySelections() {
+        $('#submit-payment-type a.choice').removeClass('selected')
+            .find('input').removeAttr('checked');
+
+        $('#id_free_platforms, #id_paid_platforms').val([]);
+    }
+
+    // Best function name ever?
+    function allTabsDeselected() {
+        var freeTabs = $('#id_free_platforms option:selected').length;
+        var paidTabs = $('#id_paid_platforms option:selected').length;
+
+        return freeTabs === 0 && paidTabs === 0;
+    }
+
+    // Condition to show packaged tab...ugly but works.
+    function showPackagedTab() {
+        return ($('#id_free_platforms option[value=free-firefoxos]:selected').length &&
+               $('#id_free_platforms option:selected').length == 1) ||
+               $('#id_paid_platforms option[value=paid-firefoxos]:selected').length ||
+               allTabsDeselected();
+    }
+
+    // Toggle packaged/hosted tab state.
+    function setTabState() {
         if (!$('#id_free_platforms, #id_paid_platforms').length) {
             return;
         }
-        var $target = $('#upload-file hgroup h2');
 
         // If only free-os or paid-os is selected, show packaged.
-        if (($('#id_free_platforms option[value=free-firefoxos]:selected').length &&
-             $('#id_free_platforms option:selected').length == 1) ||
-            $('#id_paid_platforms option[value=paid-firefoxos]:selected').length) {
-            $target.eq(1).css('display', 'inline');
+        if (showPackagedTab()) {
+            $('#packaged-tab-header').css('display', 'inline');
         } else {
-            $target.eq(1).css('display', 'none');
+            $('#packaged-tab-header').hide();
+            $('#hosted-tab-header').find('a').click();
         }
     }
 
@@ -100,17 +122,17 @@
         }
     });
 
-    // On page load, update the big device buttons with the values in the form.
-    $('#upload-webapp select').each(function(i, e) {
-        $.each($(e).val() || [], function() {
-            $('#submit-payment-type #' + this).addClass('selected');
+    // Deselect all checkboxes once tabs have been setup.
+    if (isSubmitAppPage) {
+        $('.tabbable').bind('tabs-setup', nullifySelections);
+    } else {
+        // On page load, update the big device buttons with the values in the form.
+        $('#upload-webapp select').each(function(i, e) {
+            $.each($(e).val() || [], function() {
+                $('#submit-payment-type #' + this).addClass('selected');
+            });
         });
-    });
-
-    // Hide the packaged tab, if needed, once the tabs have been created.
-    $('.tabbable').bind('tabs-setup', function() {
-        show_packaged();
-    });
+    }
 
 })(typeof exports === 'undefined' ? (this.submit_details = {}) : exports);
 
@@ -120,7 +142,7 @@ $(document).ready(function() {
     // Anonymous users can view the Developer Agreement page,
     // and then we prompt for log in.
     if (z.anonymous && $('#submit-terms').length) {
-        var $login = $('#login');
+        var $login = $('.overlay.login');
         $login.addClass('show');
         $('#submit-terms form').on('click', 'button', _pd(function() {
             $login.addClass('show');
@@ -129,18 +151,15 @@ $(document).ready(function() {
 
     // Icon previews.
     imageStatus.start(true, false);
-    $('#submit-media').bind('click', function() {
-        imageStatus.cancel();
-    });
+    $('#submit-media').on('click', imageStatus.cancel);
 
-    submit_details.houdini();
-    $('#submit-details').exists(function () {
+    if (document.getElementById('submit-details')) {
         //submit_details.general();
         //submit_details.privacy();
         initCatFields();
         initCharCount();
         initSubmit();
         initTruncateSummary();
-    });
+    }
     submit_details.houdini();
 });

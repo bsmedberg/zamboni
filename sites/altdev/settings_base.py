@@ -99,7 +99,7 @@ ADDON_ICONS_PATH = UPLOADS_PATH + '/addon_icons'
 COLLECTIONS_ICON_PATH = UPLOADS_PATH + '/collection_icons'
 IMAGEASSETS_PATH = UPLOADS_PATH + '/imageassets'
 IMAGEASSET_FULL_PATH = IMAGEASSETS_PATH + '/%s/%d.%s'
-PERSONAS_PATH = UPLOADS_PATH + '/personas'
+PERSONAS_PATH = UPLOADS_PATH + '/themes'
 PREVIEWS_PATH = UPLOADS_PATH + '/previews'
 SIGNED_APPS_PATH = NETAPP_STORAGE + '/signed_apps'
 SIGNED_APPS_REVIEWER_PATH = NETAPP_STORAGE + '/signed_apps_reviewer'
@@ -209,15 +209,5 @@ XSENDFILE_HEADER  = 'X-Accel-Redirect'
 
 GEOIP_NOOP = 0
 
-METLOG_CONF = {
-    'plugins': {'cef': ('metlog_cef.cef_plugin:config_plugin', {})},
-    'sender': {
-        'class': 'metlog.senders.UdpSender',
-        'host': splitstrip(private.METLOG_CONF_SENDER_HOST),
-        'port': private.METLOG_CONF_SENDER_PORT,
-    },
-}
-
-USE_METLOG_FOR_CEF = True
 
 ALLOW_SELF_REVIEWS = True

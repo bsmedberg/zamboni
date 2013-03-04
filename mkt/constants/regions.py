@@ -79,6 +79,16 @@ class BR(REGION):
     has_payments = True
 
 
+class SPAIN(REGION):
+    id = 8
+    name = _lazy(u'Spain')
+    slug = 'spain'
+    default_currency = 'EUR'
+    default_language = 'es'
+    mcc = 214
+    has_payments = True
+
+
 # Create a list of tuples like so (in alphabetical order):
 #
 #     [('worldwide', <class 'mkt.constants.regions.WORLDWIDE'>),
@@ -89,9 +99,9 @@ class BR(REGION):
 DEFINED = sorted(inspect.getmembers(sys.modules[__name__], inspect.isclass),
                  key=lambda x: getattr(x, 'slug', None))
 REGIONS_CHOICES = (
-    [('worldwide', WORLDWIDE)]
-    + sorted([(v.slug, v) for k, v in DEFINED if v.id and v.weight > -1],
-             key=lambda x: x[1].weight, reverse=True)
+    [('worldwide', WORLDWIDE)] +
+    sorted([(v.slug, v) for k, v in DEFINED if v.id and v.weight > -1],
+           key=lambda x: x[1].weight, reverse=True)
 )
 
 BY_SLUG = sorted([v for k, v in DEFINED if v.id and v.weight > -1],
@@ -105,10 +115,9 @@ REGIONS_CHOICES_NAME = ([(WORLDWIDE.id, WORLDWIDE.name)] +
 
 REGIONS_DICT = dict(REGIONS_CHOICES)
 REGIONS_CHOICES_ID_DICT = dict(REGIONS_CHOICES_ID)
-
 ALL_REGIONS = frozenset(REGIONS_DICT.values())
 ALL_PAID_REGIONS = frozenset(r for r in ALL_REGIONS if r.has_payments)
 
 ALL_REGION_IDS = sorted(REGIONS_CHOICES_ID_DICT.keys())
 ALL_PAID_REGION_IDS = sorted(r.id for r in ALL_PAID_REGIONS)
-REGION_IDS = sorted(REGIONS_CHOICES_ID_DICT.keys()[1:])
+REGION_IDS = sorted(REGIONS_CHOICES_ID_DICT.keys())[1:]

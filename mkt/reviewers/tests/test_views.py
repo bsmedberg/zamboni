@@ -2105,6 +2105,20 @@ class TestMiniManifestView(BasePackagedAppTest):
                                           args=[self.app.app_slug,
                                                 self.version.id]))
 
+    def test_rejected(self):
+        # Rejected sets file.status to DISABLED and moves to a guarded path.
+        self.setup_files()
+        self.app.update(status=amo.STATUS_REJECTED)
+        self.file.update(status=amo.STATUS_DISABLED)
+        res = self.client.get(self.url)
+        eq_(res['Content-type'], 'application/x-web-app-manifest+json')
+        data = json.loads(res.content)
+        eq_(data['name'], self.app.name)
+        eq_(data['developer']['name'], 'Mozilla Labs')
+        eq_(data['package_path'], reverse('reviewers.signed',
+                                          args=[self.app.app_slug,
+                                                self.version.id]))
+
 
 class TestReviewersScores(AppReviewerTest, AccessMixin):
     fixtures = ['base/users']
@@ -2318,7 +2332,7 @@ class TestAppsReviewing(AppReviewerTest, AccessMixin):
     def setUp(self):
         self.login_as_editor()
         super(TestAppsReviewing, self).setUp()
-        self.url = reverse('reviewers.apps_reviewing')
+        self.url = reverse('reviewers.apps.apps_reviewing')
         self.apps = [app_factory(name='Antelope',
                                  status=amo.STATUS_PENDING),
                      app_factory(name='Bear',

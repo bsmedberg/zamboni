@@ -96,7 +96,7 @@ ul.license {
         }
         .title,
         .author {
-            background: fadeOut(#fff, 40%);
+            background: rgba(255,255,255,.6);
             clear: left;
             display: block;
             float: left;
@@ -124,7 +124,7 @@ ul.license {
         display: block;
         padding-top: 2px;
     }
-    .addon-cats ul {
+    .addon-cats label + ul {
         .columns(4);
     }
     #persona-license {
@@ -240,5 +240,24 @@ ul.license {
     }
     #persona-license, #persona-license-list {
         margin-bottom: 13px;
+    }
+}
+
+.prettyform {
+    .legal {
+        border-top: 1px dotted #c9ddf2;
+        margin: 2.5em 1em 0;
+        padding-top: 1em;
+        label {
+            display: block;
+            padding-bottom: 1.5em;
+        }
+    }
+    .listing-footer {
+        .border-radius(0 0 5px 5px);
+        .gradient-two-color(rgba(201,221,242,.2), rgba(201,221,242,.1));
+        border-top: 1px dotted @border-blue;
+        padding: 1.5em 2em;
+        margin: 0 -1.1em -1.1em -1.1em;
     }
 }
