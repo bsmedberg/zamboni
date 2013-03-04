@@ -109,4 +109,4 @@ tower==0.3.4
 -e git://github.com/andymccurdy/redis-py.git@79d22358410936358c71c88abbdb2a26e3cedc28#egg=redis-py
 
 # temp
--e git://github.com/mozilla/monolith-client.git@edc3e8d1c3a02e5ec3f7efd91d60021fcbc6fb5a#egg=monolith-client
+-e git://github.com/mozilla/monolith-client.git@c0b213223b49ee5350b912db981af9c371ca09d7#egg=monolith-client
