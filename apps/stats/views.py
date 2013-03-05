@@ -26,6 +26,7 @@ from addons.models import Addon
 from bandwagon.models import Collection
 from bandwagon.views import get_collection
 from monolith.client import Client as MonolithClient
+
 import requests
 import waffle
 from zadmin.models import SiteEvent
